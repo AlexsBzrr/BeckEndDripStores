@@ -8,6 +8,26 @@ const options = {
       version: "1.0.0",
       description: "Documentação da API Drip Stores",
     },
+    tags: [
+      { name: "Login", description: "Endpoints de login" },
+      { name: "Users", description: "Gerenciamento de usuários" },
+      { name: "Category", description: "Gerenciamento de categorias" },
+      { name: "Products", description: "Gerenciamento de produtos" },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
   },
   apis: ["../src/config/*.js", "./src/controllers/*.js"],
 };

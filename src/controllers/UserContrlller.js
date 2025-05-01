@@ -1,40 +1,7 @@
 const User = require("../models/User");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const authConfig = require("../config/auth");
-
-function generateToken(params = {}) {
-  return jwt.sign(params, authConfig.secret, {
-    expiresIn: 86400,
-  });
-}
+const { generateToken } = require("../controllers/LoginController");
 
 module.exports = {
-  async login(req, res) {
-    const { email, password, islogged } = req.body;
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(400).send("Email ou senha incorretos");
-    }
-    if (!bcrypt.compareSync(password, user.password)) {
-      return res.status(400).send("Email ou senha incorretos");
-    }
-    const id = user.id;
-
-    await User.update({ islogged: true }, { where: { id: user.id } });
-
-    //para nao retornar a senha ao logar
-    user.password = undefined;
-
-    const token = generateToken({ id });
-
-    return res.status(200).json({
-      mensagem: "Usuário logado com sucesso!",
-      user,
-      token,
-    });
-  },
-
   async index(req, res) {
     const users = await User.findAll();
     if (!users) {
@@ -103,6 +70,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Retorna a lista de usuários
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de usuários
@@ -133,6 +102,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Cria um novo usuário
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -177,6 +148,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Busca um usuário pelo ID
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -204,9 +177,6 @@ module.exports = {
  *                 email:
  *                   type: string
  *                   example: "john@example.com"
- *                 password:
- *                   type: string
- *                   example: "$2b$10$1234567890abcdefg"
  *       404:
  *         description: Usuário não encontrado
  *         content:
@@ -221,6 +191,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Atualiza um usuário existente
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -267,6 +239,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Deleta um usuário pelo ID
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

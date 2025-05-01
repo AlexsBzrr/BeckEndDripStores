@@ -5,6 +5,7 @@ const connection = new Sequelize(dbConfig);
 
 const User = require("../models/User");
 const Category = require("../models/Category");
+const Login = require("../models/Login");
 
 User.init(connection);
 Category.init(connection);
