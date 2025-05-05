@@ -7,7 +7,9 @@ module.exports = {
     if (!users) {
       return res.status(200).send("Nenhum usuário cadastrado");
     }
-    return res.status(200).json({ users });
+    return res
+      .status(200)
+      .json({ users, total: users.length, count: users.length });
   },
 
   async show(req, res) {
@@ -65,7 +67,7 @@ module.exports = {
 
 /**
  * @swagger
- * /users:
+ * /api/users:
  *   get:
  *     tags:
  *       - Users
@@ -143,7 +145,7 @@ module.exports = {
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/users/{id}:
  *   get:
  *     tags:
  *       - Users

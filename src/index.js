@@ -8,13 +8,21 @@ require("./database");
 
 dotenv.config();
 
-const port = process.env.PORT;
+const port = process.env.PORT || 8800; // fallback para evitar erros
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 app.use(express.json());
-app.use(router);
-app.use("/api", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use("/api", router);
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
