@@ -44,7 +44,7 @@ module.exports = {
  */
 /**
  * @swagger
- * /users/login:
+ * /v1/users/login:
  *   post:
  *     tags:
  *       - Login

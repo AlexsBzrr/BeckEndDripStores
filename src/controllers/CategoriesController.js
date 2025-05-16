@@ -1,4 +1,4 @@
-const Category = require("../models/Category");
+const Category = require("../models/category");
 
 module.exports = {
   async index(req, res) {
@@ -51,7 +51,7 @@ module.exports = {
  */
 /**
  * @swagger
- * /Category:
+ * /v1/category:
  *   post:
  *     tags:
  *       - Category
@@ -116,7 +116,7 @@ module.exports = {
 
 /**
  * @swagger
- * /Category/{id}:
+ * /v1/category/{id}:
  *   put:
  *     tags:
  *       - Category
@@ -188,7 +188,7 @@ module.exports = {
 
 /**
  * @swagger
- * /Category:
+ * /v1/category:
  *   get:
  *     tags:
  *       - Category
@@ -232,7 +232,7 @@ module.exports = {
 
 /**
  * @swagger
- * /Category/{id}:
+ * /v1/category/{id}:
  *   get:
  *     tags:
  *       - Category

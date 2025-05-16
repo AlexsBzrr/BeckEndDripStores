@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const router = require("./routes");
 const swaggerUi = require("swagger-ui-express");
@@ -9,6 +10,7 @@ require("./database");
 dotenv.config();
 
 const port = process.env.PORT || 8800; // fallback para evitar erros
+const host = process.env.HOST || "localhost";
 const app = express();
 
 app.use(
@@ -17,12 +19,14 @@ app.use(
     credentials: true,
   })
 );
+app.use("/uploads", express.static(path.resolve(__dirname, "..", "uploads")));
+
 app.use(express.json());
 
-app.use("/api", router);
+app.use("/v1", router);
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server running on port http://${host}:${port}`);
 });

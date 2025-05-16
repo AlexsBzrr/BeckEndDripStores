@@ -2,6 +2,7 @@ const User = require("../models/User");
 const { generateToken } = require("../controllers/LoginController");
 
 module.exports = {
+  //listagem de usuários
   async index(req, res) {
     const users = await User.findAll();
     if (!users) {
@@ -67,7 +68,7 @@ module.exports = {
 
 /**
  * @swagger
- * /api/users:
+ * /v1/users:
  *   get:
  *     tags:
  *       - Users
@@ -145,7 +146,7 @@ module.exports = {
 
 /**
  * @swagger
- * /api/users/{id}:
+ * /v1/users/{id}:
  *   get:
  *     tags:
  *       - Users

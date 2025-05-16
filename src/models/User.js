@@ -1,5 +1,6 @@
 const { Model, DataTypes } = require("sequelize");
 const bcrypt = require("bcrypt");
+
 class User extends Model {
   static init(sequelize) {
     return super.init(
@@ -14,8 +15,10 @@ class User extends Model {
         sequelize,
         hooks: {
           beforeCreate: async (user) => {
-            const salt = await bcrypt.genSaltSync();
-            user.password = await bcrypt.hashSync(user.password, salt);
+            // Gerando o salt de forma assíncrona
+            const salt = await bcrypt.genSalt(10); // 10 é o número de rounds de salt
+            // Criptografando a senha de forma assíncrona
+            user.password = await bcrypt.hash(user.password, salt);
           },
         },
         modelName: "User",
