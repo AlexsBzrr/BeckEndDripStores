@@ -28,20 +28,39 @@ module.exports = {
     return res.json(category);
   },
   async update(req, res) {
-    const category = await CategoryService.updateCategory(
-      req.params.id,
-      req.body
-    );
-    return res.status(200).send({
-      message: "Categoria atualizado com sucesso!",
-      category,
-    });
+    const { name, slug } = req.body;
+
+    try {
+      await CategoryService.updateCategory(req.params.id, name, slug);
+      return res.status(200).send({
+        message: "Categoria atualizada com sucesso!",
+      });
+    } catch (error) {
+      return res.status(400).send({
+        message: "Erro ao atualizar a categoria.",
+        error: error.message,
+      });
+    }
   },
 
   //exclusão de categorias
   async delete(req, res) {
-    const category = await CategoryService.deleteCategory(req.params.id);
-    return res.json(category);
+    try {
+      const deletedCount = await CategoryService.deleteCategory(req.params.id);
+
+      if (deletedCount === 0) {
+        return res.status(404).json({ message: "Categoria não encontrada." });
+      }
+
+      return res
+        .status(200)
+        .json({ message: "Categoria deletada com sucesso." });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Erro ao deletar a categoria.",
+        error: error.message,
+      });
+    }
   },
 };
 
@@ -70,7 +89,7 @@ module.exports = {
  *             required:
  *               - name
  *               - slug
- *               - use_in_menu
+ *
  *             properties:
  *               name:
  *                 type: string
@@ -78,9 +97,7 @@ module.exports = {
  *               slug:
  *                 type: string
  *                 example: "shoes"
- *               use_in_menu:
- *                 type: boolean
- *                 example: true
+ *
  *     responses:
  *       201:
  *         description: Categoria criada com sucesso
@@ -142,7 +159,7 @@ module.exports = {
  *             required:
  *               - name
  *               - slug
- *               - use_in_menu
+ *
  *             properties:
  *               name:
  *                 type: string
@@ -150,9 +167,7 @@ module.exports = {
  *               slug:
  *                 type: string
  *                 example: "tenis"
- *               use_in_menu:
- *                 type: boolean
- *                 example: true
+ *
  *     responses:
  *       200:
  *         description: Categoria atualizada com sucesso
@@ -218,9 +233,7 @@ module.exports = {
  *                   slug:
  *                     type: string
  *                     example: "shoes"
- *                   use_in_menu:
- *                     type: boolean
- *                     example: true
+ *
  *       401:
  *         description: Não autorizado
  *         content:
@@ -267,9 +280,7 @@ module.exports = {
  *                 slug:
  *                   type: string
  *                   example: "shoes"
- *                 use_in_menu:
- *                   type: boolean
- *                   example: true
+ *
  *       404:
  *         description: Categoria não encontrada
  *         content:

@@ -10,26 +10,44 @@ module.exports = {
 
   async show(req, res) {
     const user = await UserService.findUserById(req.params.id);
+    if (!user)
+      return res.status(404).send({ message: "Usuário nao encontrado" });
     return res.json(user);
   },
 
   async store(req, res) {
-    const user = await UserService.createUser(req.body);
-    const token = generateToken({ id: user.id });
-    return res
-      .status(200)
-      .send({ message: "Usuário criado com sucesso!", user, token });
+    try {
+      console.log("req.body:", req.body);
+      const user = await UserService.createUser(req.body);
+      const token = generateToken({ id: user.id });
+      return res.status(200).send({
+        message: "Usuário criado com sucesso!",
+        user,
+        token,
+      });
+    } catch (error) {
+      console.error("Erro ao criar usuário:", error); // Mostra erro real
+      return res.status(500).send({
+        message: "Erro interno ao criar o usuário",
+        error: error.message,
+      });
+    }
   },
 
   async update(req, res) {
     const user = await UserService.updateUser(req.params.id, req.body);
+    if (!user)
+      return res.status(404).send({ message: "Usuário nao encontrado" });
     return res
       .status(200)
       .send({ message: "Usuário atualizado com sucesso!", user });
   },
 
   async delete(req, res) {
+    const user = await UserService.findUserById(req.params.id);
     await UserService.deleteUser(req.params.id);
+    if (!user)
+      return res.status(404).send({ message: "Usuário nao encontrado" });
     return res.status(200).send({ message: "Usuário deletado com sucesso!" });
   },
 };

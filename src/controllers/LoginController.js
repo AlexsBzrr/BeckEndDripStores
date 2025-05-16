@@ -10,6 +10,7 @@ function generateToken(params = {}) {
 }
 
 module.exports = {
+  generateToken,
   async login(req, res) {
     const { email, password, islogged } = req.body;
     const user = await User.findOne({ where: { email } });

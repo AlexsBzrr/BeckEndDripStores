@@ -10,6 +10,14 @@ const UserService = {
   },
 
   async createUser(data) {
+    const userExists = await User.findOne({ where: { email: data.email } });
+
+    if (userExists) {
+      const error = new Error("E-mail já está em uso.");
+      error.status = 400; // Bad Request
+      throw error;
+    }
+
     return await User.create(data);
   },
 
