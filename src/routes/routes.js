@@ -1,11 +1,11 @@
 const express = require("express");
-const UserController = require("./controllers/UserContrlller");
-const CategoryController = require("./controllers/CategoriesController");
-const authMiddleware = require("./models/middleware/auth");
+const UserController = require("../controllers/UserContrlller");
+const CategoryController = require("../controllers/CategoriesController");
+//const authMiddleware = require("./middleware/auth");
 const router = express.Router();
-const LoginController = require("./controllers/LoginController");
-const ProductController = require("./controllers/ProdutctController"); // Corrigido de "ProdutctController"
-const upload = require("./models/middleware/upload");
+const LoginController = require("../controllers/LoginController");
+const ProductController = require("../controllers/ProdutctController"); // Corrigido de "ProdutctController"
+const upload = require("../middlewares/upload");
 
 //router.use(authMiddleware);
 

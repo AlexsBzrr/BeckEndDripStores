@@ -1,59 +1,95 @@
-const User = require("../models/User");
-const { generateToken } = require("../controllers/LoginController");
+// const User = require("../models/User");
+// const { generateToken } = require("../controllers/LoginController");
+
+// module.exports = {
+//   //listagem de usuários
+//   async index(req, res) {
+//     const users = await User.findAll();
+//     if (!users) {
+//       return res.status(200).send("Nenhum usuário cadastrado");
+//     }
+//     return res
+//       .status(200)
+//       .json({ users, total: users.length, count: users.length });
+//   },
+
+//   async show(req, res) {
+//     const { id } = req.params;
+//     const user = await User.findByPk(id);
+//     return res.json(user);
+//   },
+
+//   //criação de usuários
+//   async store(req, res) {
+//     const user = await User.create(req.body);
+//     const token = generateToken({ id: user.id });
+//     return res.status(200).send({
+//       message: "Usuário criado com sucesso!",
+//       user,
+//       token,
+//     });
+//   },
+
+//   async update(req, res) {
+//     const { id } = req.params;
+//     await User.update(req.body, {
+//       where: {
+//         id,
+//       },
+//     });
+//     const user = await User.findByPk(id);
+//     return res.status(200).send({
+//       message: "Usuário atualizado com sucesso!",
+//       user,
+//     });
+//   },
+
+//   async delete(req, res) {
+//     const { id } = req.params;
+//     await User.destroy({
+//       where: {
+//         id,
+//       },
+//     });
+//     return res.status(200).send({
+//       message: "Usuário deletado com sucesso!",
+//     });
+//   },
+// };
+
+const UserService = require("../services/UserService");
+const { generateToken } = require("./LoginController");
 
 module.exports = {
-  //listagem de usuários
   async index(req, res) {
-    const users = await User.findAll();
-    if (!users) {
-      return res.status(200).send("Nenhum usuário cadastrado");
-    }
-    return res
-      .status(200)
-      .json({ users, total: users.length, count: users.length });
+    const users = await UserService.listUsers();
+    if (!users.length) return res.status(200).send("Nenhum usuário cadastrado");
+    return res.status(200).json({ users, total: users.length });
   },
 
   async show(req, res) {
-    const { id } = req.params;
-    const user = await User.findByPk(id);
+    const user = await UserService.findUserById(req.params.id);
     return res.json(user);
   },
 
-  //criação de usuários
   async store(req, res) {
-    const user = await User.create(req.body);
+    const user = await UserService.createUser(req.body);
     const token = generateToken({ id: user.id });
-    return res.status(200).send({
-      message: "Usuário criado com sucesso!",
-      user,
-      token,
-    });
+    return res
+      .status(200)
+      .send({ message: "Usuário criado com sucesso!", user, token });
   },
 
   async update(req, res) {
-    const { id } = req.params;
-    await User.update(req.body, {
-      where: {
-        id,
-      },
-    });
-    const user = await User.findByPk(id);
-    return res.status(200).send({
-      message: "Usuário atualizado com sucesso!",
-      user,
-    });
+    const user = await UserService.updateUser(req.params.id, req.body);
+    return res
+      .status(200)
+      .send({ message: "Usuário atualizado com sucesso!", user });
   },
 
   async delete(req, res) {
-    const { id } = req.params;
-    await User.destroy({
-      where: {
-        id,
-      },
-    });
-    return res.status(200).send({
-      message: "Usuário deletado com sucesso!",
-    });
+    await UserService.deleteUser(req.params.id);
+    return res.status(200).send({ message: "Usuário deletado com sucesso!" });
   },
 };
 

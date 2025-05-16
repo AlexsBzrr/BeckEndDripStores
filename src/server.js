@@ -1,7 +1,7 @@
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
-const router = require("./routes");
+const router = require("./routes/routes");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./docs/sawgeer");
 const dotenv = require("dotenv");
@@ -9,7 +9,7 @@ require("./database");
 
 dotenv.config();
 
-const port = process.env.PORT || 8800; // fallback para evitar erros
+const port = process.env.PORT || 8800;
 const host = process.env.HOST || "localhost";
 const app = express();
 
