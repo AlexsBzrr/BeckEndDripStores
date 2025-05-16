@@ -1,43 +1,46 @@
-const Category = require("../models/category");
+const CategoryService = require("../services/CategoryService");
 
 module.exports = {
   async index(req, res) {
-    const categories = await Category.findAll();
-    return res.json(categories);
-  },
-
-  //criação de categorias
-  async store(req, res) {
-    const category = await Category.create(req.body);
-    return res.status(200).send({
-      message: "Categoria criado com sucesso!",
-      category,
-    });
-  },
-
-  async show(req, res) {
-    const { id } = req.params;
-    const category = await Category.findByPk(id);
+    const category = await CategoryService.listCategories();
     return res.json(category);
   },
+  //criação de categorias
+  async store(req, res) {
+    const { name, slug } = req.body;
 
+    try {
+      const category = await CategoryService.createCategory(name, slug);
+      return res.status(201).send({
+        message: "Categoria criada com sucesso!",
+        category,
+      });
+    } catch (error) {
+      return res.status(400).send({
+        message: "Erro ao criar categoria",
+        error: error.message,
+      });
+    }
+  },
+  //exibição de categorias
+  async show(req, res) {
+    const category = await CategoryService.getCategoryById(req.params.id);
+    return res.json(category);
+  },
   async update(req, res) {
-    const { id } = req.params;
-    await Category.update(req.body, {
-      where: {
-        id,
-      },
-    });
-    const category = await Category.findByPk(id);
+    const category = await CategoryService.updateCategory(
+      req.params.id,
+      req.body
+    );
     return res.status(200).send({
       message: "Categoria atualizado com sucesso!",
       category,
     });
   },
 
+  //exclusão de categorias
   async delete(req, res) {
-    const { id } = req.params;
-    const category = await Category.findByPk(id);
+    const category = await CategoryService.deleteCategory(req.params.id);
     return res.json(category);
   },
 };
