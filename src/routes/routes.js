@@ -1,20 +1,21 @@
 const express = require("express");
 const UserController = require("../controllers/UserContrlller");
 const CategoryController = require("../controllers/CategoriesController");
-//const authMiddleware = require("./middleware/auth");
-const router = express.Router();
 const LoginController = require("../controllers/LoginController");
 const ProductController = require("../controllers/ProdutctController"); // Corrigido de "ProdutctController"
+const authMiddleware = require("../middlewares/auth");
 const upload = require("../middlewares/upload");
 
-//router.use(authMiddleware);
+const router = express.Router();
+const routerPrivate = express.Router();
 
+routerPrivate.use(authMiddleware);
 // Rotas para login
 router.post("/users/login", LoginController.login);
 
 // Rotas para Usuarios
-router.post("/users", UserController.store);
 router.get("/users", UserController.index);
+router.post("/users", UserController.store);
 router.get("/users/:id", UserController.show);
 router.put("/users/:id", UserController.update);
 router.delete("/users/:id", UserController.delete);
@@ -33,4 +34,4 @@ router.get("/product/:id", ProductController.show);
 router.put("/product/:id", ProductController.update);
 router.delete("/product/:id", ProductController.delete);
 
-module.exports = router;
+module.exports = { router, routerPrivate };

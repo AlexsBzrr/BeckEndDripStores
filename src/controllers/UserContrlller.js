@@ -1,34 +1,68 @@
 const UserService = require("../services/UserService");
 const { generateToken } = require("./LoginController");
+const userSchema = require("../validations/userValidation");
 
+//exibição de usuários
 module.exports = {
   async index(req, res) {
     const users = await UserService.listUsers();
     if (!users.length) return res.status(200).send("Nenhum usuário cadastrado");
     return res.status(200).json({ users, total: users.length });
   },
-
+  //exibição de usuário pelo id
   async show(req, res) {
     const user = await UserService.findUserById(req.params.id);
     if (!user)
       return res.status(404).send({ message: "Usuário nao encontrado" });
-    return res.json(user);
+    return res.json({
+      id: user.id,
+      firstname: user.firstname,
+      surname: user.surname,
+      email: user.email,
+    });
   },
 
+  //atualização de usuários
   async store(req, res) {
     try {
-      console.log("req.body:", req.body);
-      const user = await UserService.createUser(req.body);
-      const token = generateToken({ id: user.id });
-      return res.status(200).send({
+      const { error, value } = userSchema.validate(req.body, {
+        stripUnknown: true,
+      });
+
+      if (error) {
+        return res.status(400).json({
+          message: "Erro de validação",
+          error: error.details[0].message,
+        });
+      }
+
+      const { confirmPassword, ...userData } = value;
+      const user = await UserService.createUser(userData);
+
+      const tokenPayload = {
+        id: user.id,
+        firstname: user.firstname,
+        surname: user.surname,
+        email: user.email,
+      };
+
+      const token = generateToken(tokenPayload);
+
+      return res.status(201).json({
         message: "Usuário criado com sucesso!",
-        user,
+        user: {
+          id: user.id,
+          firstname: user.firstname,
+          surname: user.surname,
+          email: user.email,
+          islogged: user.islogged || false,
+          createdAt: user.createdAt,
+        },
         token,
       });
     } catch (error) {
-      console.error("Erro ao criar usuário:", error); // Mostra erro real
-      return res.status(500).send({
-        message: "Erro interno ao criar o usuário",
+      return res.status(400).json({
+        message: "Erro ao criar usuário",
         error: error.message,
       });
     }
@@ -42,6 +76,7 @@ module.exports = {
       .status(200)
       .send({ message: "Usuário atualizado com sucesso!", user });
   },
+  //exclusão de usuários
 
   async delete(req, res) {
     const user = await UserService.findUserById(req.params.id);
