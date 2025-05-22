@@ -18,7 +18,6 @@ const UserService = {
     const userExists = await User.findOne({ where: { email: data.email } });
 
     if (userExists) {
-      console.log("❌ Email já existe");
       const error = new Error("E-mail já está em uso.");
       error.status = 400;
       throw error;
@@ -35,9 +34,6 @@ const UserService = {
 
     // const originalPassword = data.password;
     data.password = passwordHash;
-
-    console.log("Salvando usuário no banco...");
-    console.log("Dados do usuário:", { ...data, password: "[HASH_HIDDEN]" });
 
     const user = await User.create(data);
 

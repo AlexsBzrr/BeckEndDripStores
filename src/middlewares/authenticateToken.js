@@ -20,10 +20,8 @@ function authenticateToken(req, res, next) {
       email: decoded.email,
     };
 
-    console.log("Usuário autenticado via token:", req.user);
     next();
   } catch (error) {
-    console.error("Token inválido:", error.message);
     return res.status(403).json({
       message: "Token inválido ou expirado",
     });
