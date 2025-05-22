@@ -1,89 +1,89 @@
-const User = require("../models/User");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const authConfig = require("../config/auth");
+const UserService = require("../services/UserService");
+const { generateToken } = require("./LoginController");
+const userSchema = require("../validations/userValidation");
 
-function generateToken(params = {}) {
-  return jwt.sign(params, authConfig.secret, {
-    expiresIn: 86400,
-  });
-}
-
+//exibição de usuários
 module.exports = {
-  async login(req, res) {
-    const { email, password, islogged } = req.body;
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(400).send("Email ou senha incorretos");
-    }
-    if (!bcrypt.compareSync(password, user.password)) {
-      return res.status(400).send("Email ou senha incorretos");
-    }
-    const id = user.id;
-
-    await User.update({ islogged: true }, { where: { id: user.id } });
-
-    //para nao retornar a senha ao logar
-    user.password = undefined;
-
-    const token = generateToken({ id });
-
-    return res.status(200).json({
-      mensagem: "Usuário logado com sucesso!",
-      user,
-      token,
-    });
-  },
-
   async index(req, res) {
-    const users = await User.findAll();
-    if (!users) {
-      return res.status(200).send("Nenhum usuário cadastrado");
-    }
-    return res.status(200).json({ users });
+    const users = await UserService.listUsers();
+    if (!users.length) return res.status(200).send("Nenhum usuário cadastrado");
+    return res.status(200).json({ users, total: users.length });
   },
-
+  //exibição de usuário pelo id
   async show(req, res) {
-    const { id } = req.params;
-    const user = await User.findByPk(id);
-    return res.json(user);
+    const user = await UserService.findUserById(req.params.id);
+    if (!user)
+      return res.status(404).send({ message: "Usuário nao encontrado" });
+    return res.json({
+      id: user.id,
+      firstname: user.firstname,
+      surname: user.surname,
+      email: user.email,
+    });
   },
 
-  //criação de usuários
+  //atualização de usuários
   async store(req, res) {
-    const user = await User.create(req.body);
-    const token = generateToken({ id: user.id });
-    return res.status(200).send({
-      message: "Usuário criado com sucesso!",
-      user,
-      token,
-    });
+    try {
+      const { error, value } = userSchema.validate(req.body, {
+        stripUnknown: true,
+      });
+
+      if (error) {
+        return res.status(400).json({
+          message: "Erro de validação",
+          error: error.details[0].message,
+        });
+      }
+
+      const { confirmPassword, ...userData } = value;
+      const user = await UserService.createUser(userData);
+
+      const tokenPayload = {
+        id: user.id,
+        firstname: user.firstname,
+        surname: user.surname,
+        email: user.email,
+      };
+
+      const token = generateToken(tokenPayload);
+
+      return res.status(201).json({
+        message: "Usuário criado com sucesso!",
+        user: {
+          id: user.id,
+          firstname: user.firstname,
+          surname: user.surname,
+          email: user.email,
+          islogged: user.islogged || false,
+          createdAt: user.createdAt,
+        },
+        token,
+      });
+    } catch (error) {
+      return res.status(400).json({
+        message: "Erro ao criar usuário",
+        error: error.message,
+      });
+    }
   },
 
   async update(req, res) {
-    const { id } = req.params;
-    await User.update(req.body, {
-      where: {
-        id,
-      },
-    });
-    const user = await User.findByPk(id);
-    return res.status(200).send({
-      message: "Usuário atualizado com sucesso!",
-      user,
-    });
+    const user = await UserService.updateUser(req.params.id, req.body);
+    if (!user)
+      return res.status(404).send({ message: "Usuário nao encontrado" });
+    return res
+      .status(200)
+      .send({ message: "Usuário atualizado com sucesso!", user });
   },
+  //exclusão de usuários
 
   async delete(req, res) {
-    const { id } = req.params;
-    await User.destroy({
-      where: {
-        id,
-      },
-    });
-    return res.status(200).send({
-      message: "Usuário deletado com sucesso!",
-    });
+    const user = await UserService.findUserById(req.params.id);
+    await UserService.deleteUser(req.params.id);
+    if (!user)
+      return res.status(404).send({ message: "Usuário nao encontrado" });
+    return res.status(200).send({ message: "Usuário deletado com sucesso!" });
   },
 };
 
@@ -98,11 +98,13 @@ module.exports = {
 
 /**
  * @swagger
- * /users:
+ * /v1/users:
  *   get:
  *     tags:
  *       - Users
  *     summary: Retorna a lista de usuários
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de usuários
@@ -133,6 +135,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Cria um novo usuário
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -172,11 +176,13 @@ module.exports = {
 
 /**
  * @swagger
- * /users/{id}:
+ * /v1/users/{id}:
  *   get:
  *     tags:
  *       - Users
  *     summary: Busca um usuário pelo ID
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -204,9 +210,6 @@ module.exports = {
  *                 email:
  *                   type: string
  *                   example: "john@example.com"
- *                 password:
- *                   type: string
- *                   example: "$2b$10$1234567890abcdefg"
  *       404:
  *         description: Usuário não encontrado
  *         content:
@@ -221,6 +224,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Atualiza um usuário existente
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -267,6 +272,8 @@ module.exports = {
  *     tags:
  *       - Users
  *     summary: Deleta um usuário pelo ID
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
