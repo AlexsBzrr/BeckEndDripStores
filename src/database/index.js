@@ -11,9 +11,11 @@ const Category = require("../models/category");
 const Product = require("../models/product"); // Note que foi corrigido de Products para Product
 const Image = require("../models/images"); // Corrigido de Images para Image (singular)
 const Option = require("../models/options"); // Corrigido de Options para Option (singular)
+const Cliente = require("../models/Cliente");
 
 // Inicializando os modelos
 User.init(connection);
+Cliente.init(connection);
 Product.init(connection);
 Category.init(connection);
 Image.init(connection);
@@ -21,6 +23,7 @@ Option.init(connection);
 
 // Executando as associações - verificando se o método existe antes de chamar
 if (User.associate) User.associate(connection.models);
+if (Cliente.associate) Cliente.associate(connection.models);
 if (Product.associate) Product.associate(connection.models);
 if (Category.associate) Category.associate(connection.models);
 if (Image.associate) Image.associate(connection.models);
