@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const Cliente = require("../models/Cliente");
+const Cliente = require("../models/cliente");
 
 function generateToken(payload, expiresIn = "24h") {
   const secret = process.env.JWT_SECRET;

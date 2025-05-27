@@ -5,7 +5,7 @@ const dbConfig = require("../config/db");
 const connection = new Sequelize(dbConfig);
 
 // Importação dos modelos
-const User = require("../models/User");
+const User = require("../models/user");
 const Category = require("../models/category");
 const Product = require("../models/product");
 const Image = require("../models/images");

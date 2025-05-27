@@ -1,5 +1,5 @@
-const Product = require("../models/product"); // Corrigido o nome do arquivo 'product.js'
-const Category = require("../models/category"); // Corrigido o nome do arquivo 'category.js'
+const Product = require("../models/product");
+const Category = require("../models/category");
 const Images = require("../models/images");
 const Option = require("../models/options");
 const { Op } = require("sequelize");
@@ -8,7 +8,7 @@ module.exports = {
   async index(req, res) {
     try {
       const products = await Product.findAll({
-        include: ["images", "options", "Categories"], // Inclusões de associações
+        include: ["images", "options", "Categories"],
       });
       return res.json(products);
     } catch (error) {
@@ -31,7 +31,6 @@ module.exports = {
         category_ids,
       } = req.body;
 
-      // options pode vir como string se for enviado como JSON em campo form-data
       let options = [];
       if (req.body.options) {
         if (typeof req.body.options === "string") {
@@ -41,9 +40,8 @@ module.exports = {
         }
       }
 
-      const images = req.files; // multer envia os arquivos aqui
+      const images = req.files;
 
-      // Criando o produto
       const product = await Product.create(
         {
           enabled,
@@ -57,7 +55,6 @@ module.exports = {
         { transaction }
       );
 
-      // Associando categorias
       if (category_ids && category_ids.length > 0) {
         const categories = await Category.findAll({
           where: { id: category_ids },
@@ -93,7 +90,7 @@ module.exports = {
         .json({ message: "Produto cadastrado com sucesso!", id: product.id });
     } catch (error) {
       await transaction.rollback();
-      console.error("Erro ao salvar produto:", error); // 👈 AJUDA A VER NO TERMINAL
+      console.error("Erro ao salvar produto:", error);
       return res.status(500).json({ error: error.message });
     }
   },
@@ -102,7 +99,7 @@ module.exports = {
     const { id } = req.params;
     try {
       const product = await Product.findByPk(id, {
-        include: ["images", "options", "Categories"], // Incluindo dados relacionados
+        include: ["images", "options", "Categories"],
       });
       return res.json(product);
     } catch (error) {
@@ -118,7 +115,7 @@ module.exports = {
         return res.status(404).json({ error: "Produto não encontrado" });
 
       const updatedProduct = await Product.findByPk(id, {
-        include: ["images", "options", "Categories"], // Incluindo dados relacionados após atualização
+        include: ["images", "options", "Categories"],
       });
 
       return res.json({
@@ -147,7 +144,7 @@ module.exports = {
     try {
       const products = await Product.findAll({
         where: { name: { [Op.iLike]: `%${name}%` } },
-        include: ["images", "options", "Categories"], // Incluindo dados relacionados
+        include: ["images", "options", "Categories"],
       });
       return res.json(products);
     } catch (error) {

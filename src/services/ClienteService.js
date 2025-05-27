@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const Cliente = require("../models/Cliente");
+const Cliente = require("../models/cliente");
 
 const ClienteService = {
   async listClientes() {
