@@ -19,11 +19,11 @@ router.post("/login", LoginController.login);
 router.post("/loginCliente", LoginClienteControllers.login);
 
 // Rotas para Usuarios
-router.get("/users", UserController.index);
-router.post("/users", UserController.store);
-router.get("/users/:id", UserController.show);
-router.put("/users/:id", UserController.update);
-router.delete("/users/:id", UserController.delete);
+router.get("/user", UserController.index);
+router.post("/user", UserController.store);
+router.get("/user/:id", UserController.show);
+router.put("/user/:id", UserController.update);
+router.delete("/user/:id", UserController.delete);
 
 // Rotas para clientes
 router.get("/clientes", ClienteController.index);
@@ -33,7 +33,7 @@ router.put("/clientes/:id", ClienteController.update);
 router.delete("/clientes/:id", ClienteController.delete);
 
 //Rotas para Categorias
-router.get("/category", CategoryController.index);
+router.get("/category/search", CategoryController.search);
 router.post("/category", CategoryController.store);
 router.get("/category/:id", CategoryController.show);
 router.put("/category/:id", CategoryController.update);

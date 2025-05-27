@@ -5,8 +5,18 @@ class Category extends Model {
   static init(sequelize) {
     return super.init(
       {
-        name: DataTypes.STRING,
-        slug: DataTypes.STRING,
+        name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          unique: true,
+        },
+        slug: {
+          type: DataTypes.STRING,
+        },
+        use_in_menu: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+        },
       },
       {
         sequelize,

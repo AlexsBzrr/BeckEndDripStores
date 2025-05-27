@@ -9,7 +9,6 @@ class User extends Model {
         surname: DataTypes.STRING,
         email: DataTypes.STRING,
         password: DataTypes.STRING,
-        islogged: DataTypes.BOOLEAN,
       },
       {
         sequelize,

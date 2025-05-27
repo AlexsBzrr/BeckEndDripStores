@@ -1,16 +1,75 @@
 const CategoryService = require("../services/CategoryService");
+const { id, message } = require("../validations/userValidation");
 
 module.exports = {
-  async index(req, res) {
-    const category = await CategoryService.listCategories();
-    return res.json(category);
+  //exibição de categorias/search com query params
+  async search(req, res) {
+    try {
+      // Query params com valores padrão
+      let { limit = 12, page = 1, fields, use_in_menu } = req.query;
+
+      // Conversões de tipo
+      limit = parseInt(limit);
+      page = parseInt(page);
+
+      // Monta os parâmetros para o Sequelize
+      const options = {
+        where: {},
+        attributes: undefined,
+        limit: limit !== -1 ? limit : undefined,
+        offset: limit !== -1 ? (page - 1) * limit : undefined,
+      };
+
+      // Filtro por use_in_menu
+      if (use_in_menu !== undefined) {
+        options.where.use_in_menu = use_in_menu === "true";
+      }
+
+      // Campos específicos
+      if (fields) {
+        options.attributes = fields.split(",").map((f) => f.trim());
+      }
+
+      // Consulta via serviço
+      const { rows, count } = await CategoryService.searchCategories(options);
+
+      // Retorno no formato esperado
+      return res.status(200).json({
+        data: rows,
+        total: count,
+        limit,
+        page,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar categorias:", error);
+      return res.status(500).json({
+        message: "Erro ao buscar categorias",
+        error: error.message,
+      });
+    }
   },
+
+  //exibição de categorias pelo id
+  async show(req, res) {
+    const category = await CategoryService.findCategoryById(req.params.id);
+    if (!category)
+      return res.status(404).json({ message: "Categoria nao encontrada." });
+    return res.json({
+      name: category.name,
+      slug: category.slug,
+      use_in_menu: category.use_in_menu,
+    });
+  },
+
   //criação de categorias
   async store(req, res) {
-    const { name, slug } = req.body;
-
+    const { name, slug, use_in_menu } = req.body;
     try {
-      const category = await CategoryService.createCategory(name, slug);
+      const category = await CategoryService.createCategory(
+        name,
+        slug,
+        use_in_menu
+      );
       return res.status(201).send({
         message: "Categoria criada com sucesso!",
         category,
@@ -22,18 +81,24 @@ module.exports = {
       });
     }
   },
-  //exibição de categorias
-  async show(req, res) {
-    const category = await CategoryService.getCategoryById(req.params.id);
-    return res.json(category);
-  },
+
   async update(req, res) {
     const { name, slug } = req.body;
 
     try {
-      await CategoryService.updateCategory(req.params.id, name, slug);
+      const category = await CategoryService.updateCategory(
+        req.params.id,
+        req.body
+      );
+      if (!category)
+        return res.status(404).json({ message: "Categoria nao encontrada." });
       return res.status(200).send({
         message: "Categoria atualizada com sucesso!",
+        category: {
+          name: category.name,
+          slug: category.slug,
+          use_in_menu: category.use_in_menu,
+        },
       });
     } catch (error) {
       return res.status(400).send({
