@@ -60,36 +60,10 @@ module.exports = {
         });
       }
 
-      const updateResult = await User.update(
-        { islogged: true },
-        { where: { id: user.id } }
-      );
       const updatedUser = await User.findOne({
         where: { id: user.id },
-        attributes: [
-          "id",
-          "firstname",
-          "surname",
-          "email",
-          "islogged",
-          "createdAt",
-        ],
+        attributes: ["id", "firstname", "surname", "email", "createdAt"],
       });
-
-      if (!updatedUser.islogged) {
-        updatedUser.islogged = true;
-        await updatedUser.save();
-        await updatedUser.reload();
-      }
-
-      const userResponse = {
-        id: updatedUser.id,
-        firstname: updatedUser.firstname,
-        surname: updatedUser.surname,
-        email: updatedUser.email,
-        islogged: updatedUser.islogged,
-        createdAt: updatedUser.createdAt,
-      };
 
       const tokenPayload = {
         id: updatedUser.id,
@@ -97,12 +71,9 @@ module.exports = {
         surname: updatedUser.surname,
         email: updatedUser.email,
       };
-
       const token = generateToken(tokenPayload);
-
       return res.status(200).json({
         message: "Usuário logado com sucesso!",
-        user: userResponse,
         token,
       });
     } catch (error) {
@@ -110,25 +81,6 @@ module.exports = {
       return res.status(500).json({
         message: "Erro interno do servidor",
         error: error.message,
-      });
-    }
-  },
-
-  async logout(req, res) {
-    try {
-      const { id } = req.user;
-      const updateResult = await User.update(
-        { islogged: false },
-        { where: { id } }
-      );
-
-      return res.status(200).json({
-        message: "Logout realizado com sucesso!",
-      });
-    } catch (error) {
-      console.error("❌ Erro no logout:", error);
-      return res.status(500).json({
-        message: "Erro interno do servidor",
       });
     }
   },
