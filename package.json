@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "prod": "node src/server.js",
     "start": "nodemon src/server.js"
   },
   "repository": {
