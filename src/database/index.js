@@ -1,5 +1,4 @@
-// src/database/index.js
-require("dotenv").config(); // aqui é o lugar certo para carregar o .env uma única vez
+require("dotenv").config();
 
 const { Sequelize } = require("sequelize");
 const dbConfig = require("../config/db");
@@ -8,10 +7,10 @@ const connection = new Sequelize(dbConfig);
 // Importação dos modelos
 const User = require("../models/User");
 const Category = require("../models/category");
-const Product = require("../models/product"); // Note que foi corrigido de Products para Product
-const Image = require("../models/images"); // Corrigido de Images para Image (singular)
-const Option = require("../models/options"); // Corrigido de Options para Option (singular)
-const Cliente = require("../models/Cliente");
+const Product = require("../models/product");
+const Image = require("../models/images");
+const Option = require("../models/options");
+const Cliente = require("../models/cliente");
 
 // Inicializando os modelos
 User.init(connection);
