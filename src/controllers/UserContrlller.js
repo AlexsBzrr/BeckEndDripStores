@@ -15,7 +15,6 @@ module.exports = {
     if (!user)
       return res.status(404).send({ message: "Usuário nao encontrado" });
     return res.json({
-      id: user.id,
       firstname: user.firstname,
       surname: user.surname,
       email: user.email,
@@ -55,8 +54,6 @@ module.exports = {
           firstname: user.firstname,
           surname: user.surname,
           email: user.email,
-          islogged: user.islogged || false,
-          createdAt: user.createdAt,
         },
         token,
       });
@@ -72,9 +69,14 @@ module.exports = {
     const user = await UserService.updateUser(req.params.id, req.body);
     if (!user)
       return res.status(404).send({ message: "Usuário nao encontrado" });
-    return res
-      .status(200)
-      .send({ message: "Usuário atualizado com sucesso!", user });
+    return res.status(200).send({
+      message: "Usuário atualizado com sucesso!",
+      user: {
+        firstname: user.firstname,
+        surname: user.surname,
+        email: user.email,
+      },
+    });
   },
   //exclusão de usuários
 
