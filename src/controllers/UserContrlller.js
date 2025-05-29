@@ -104,9 +104,9 @@ module.exports = {
 
   async delete(req, res) {
     const user = await UserService.findUserById(req.params.id);
-    await UserService.deleteUser(req.params.id);
     if (!user)
       return res.status(404).send({ message: "Usuário nao encontrado" });
+    await UserService.deleteUser(req.params.id);
     return res.status(200).send({ message: "Usuário deletado com sucesso!" });
   },
 };

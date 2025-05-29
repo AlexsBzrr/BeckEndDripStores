@@ -6,86 +6,6 @@ const { Op, Sequelize } = require("sequelize");
 const updateProductSchema = require("../validations/updateProductSchema");
 
 module.exports = {
-  // Cria um novo produto
-  // async store(req, res) {
-  //   const transaction = await Product.sequelize.transaction();
-
-  //   try {
-  //     const {
-  //       enabled,
-  //       name,
-  //       slug,
-  //       stock,
-  //       description,
-  //       price,
-  //       price_with_discount,
-  //       category_ids,
-  //     } = req.body;
-
-  //     let options = [];
-  //     if (req.body.options) {
-  //       if (typeof req.body.options === "string") {
-  //         options = JSON.parse(req.body.options);
-  //       } else if (Array.isArray(req.body.options)) {
-  //         options = req.body.options;
-  //       }
-  //     }
-
-  //     const images = req.files;
-
-  //     const product = await Product.create(
-  //       {
-  //         enabled,
-  //         name,
-  //         slug,
-  //         stock,
-  //         description,
-  //         price,
-  //         price_with_discount,
-  //       },
-  //       { transaction }
-  //     );
-
-  //     if (category_ids && category_ids.length > 0) {
-  //       const categories = await Category.findAll({
-  //         where: { id: category_ids },
-  //         transaction,
-  //       });
-  //       await product.addCategories(categories, { transaction });
-  //     }
-
-  //     // Criando imagens
-  //     if (images && images.length > 0) {
-  //       const imagensValidas = images.map((file) => ({
-  //         path: `/uploads/${file.filename}`,
-  //         enabled: true,
-  //         ProductId: product.id,
-  //       }));
-
-  //       await Images.bulkCreate(imagensValidas, { transaction });
-  //     }
-
-  //     // Criando opções
-  //     if (Array.isArray(options) && options.length > 0) {
-  //       const opcoesValidas = options.map((opt) => ({
-  //         ...opt,
-  //         ProductId: product.id,
-  //       }));
-
-  //       await Option.bulkCreate(opcoesValidas, { transaction });
-  //     }
-
-  //     await transaction.commit();
-  //     return res
-  //       .status(201)
-  //       .json({ message: "Produto cadastrado com sucesso!", id: product.id });
-  //   } catch (error) {
-  //     await transaction.rollback();
-  //     console.error("Erro ao salvar produto:", error);
-  //     return res.status(500).json({ error: error.message });
-  //   }
-  // },
-
   async store(req, res) {
     const transaction = await Product.sequelize.transaction();
 
@@ -112,25 +32,21 @@ module.exports = {
 
       const images = req.files;
 
-      // Validate required fields
       if (!name) {
         await transaction.rollback();
         return res.status(400).json({ error: "Name is required" });
       }
 
-      // Generate slug if not provided
       let finalSlug = slug;
       if (!finalSlug) {
-        // Create slug from name: remove special chars, convert to lowercase, replace spaces with hyphens
         finalSlug = name
           .toLowerCase()
           .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "") // Remove accents
-          .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9\s-]/g, "")
           .trim()
-          .replace(/\s+/g, "-"); // Replace spaces with hyphens
+          .replace(/\s+/g, "-");
 
-        // Check if slug already exists and make it unique if needed
         const existingProduct = await Product.findOne({
           where: { slug: finalSlug },
           transaction,
@@ -142,19 +58,17 @@ module.exports = {
         }
       }
 
-      // Prepare product data, ensuring all fields have values
       const productData = {
-        enabled: enabled !== undefined ? enabled : true, // Default to true if not provided
+        enabled: enabled !== undefined ? enabled : true,
         name,
         slug: finalSlug,
-        stock: stock !== undefined ? stock : 0, // Default to 0 if not provided
-        description: description || "", // Default to empty string if not provided
-        price: price || 0, // Default to 0 if not provided
-        price_with_discount: price_with_discount || null, // Can be null
+        stock: stock !== undefined ? stock : 0,
+        description: description || "",
+        price: price || 0,
+        price_with_discount: price_with_discount || null,
       };
 
-      console.log("Creating product with data:", productData); // Debug log
-
+      console.log("Creating product with data:", productData);
       const product = await Product.create(productData, { transaction });
 
       if (category_ids && category_ids.length > 0) {
@@ -217,7 +131,6 @@ module.exports = {
       const offset =
         parsedLimit > 0 ? (parsedPage - 1) * parsedLimit : undefined;
 
-      // Define valid Product attributes based on the model
       const validProductAttributes = [
         "id",
         "enabled",
@@ -234,7 +147,6 @@ module.exports = {
             .filter((field) => validProductAttributes.includes(field.trim()))
         : validProductAttributes;
 
-      // Condições do WHERE principal
       const where = {};
       if (match) {
         where[Op.or] = [
@@ -258,8 +170,6 @@ module.exports = {
         where.price = { [Op.between]: [min, max] };
       }
 
-      // Filtro por categorias (tabela de junção)
-      // Filtro por categorias (tabela de junção)
       const categoryFilterForWhere = category_ids
         ? {
             model: Category,
@@ -271,7 +181,7 @@ module.exports = {
               },
             },
             through: { attributes: [] },
-            required: true, // This is causing the issue
+            required: true,
           }
         : null;
 
@@ -325,17 +235,15 @@ module.exports = {
         include.push(categoryFilterForWhere);
       }
 
-      // Get the count first with a simpler query to avoid distinct issues
       const totalCount = await Product.count({
         where,
         include: include.map((inc) => ({
           ...inc,
-          attributes: [], // Remove attributes for count to optimize
+          attributes: [],
         })),
         distinct: true,
       });
 
-      // Then get the actual data without distinct to preserve all relationships
       const products = await Product.findAll({
         where,
         attributes,
@@ -345,16 +253,13 @@ module.exports = {
         order: [["id", "ASC"]],
       });
 
-      // Mapear os resultados para transformar Categories em category_ids
       const mappedData = products.map((product) => {
         const productJson = product.toJSON();
 
-        // Extrair os IDs das categorias - agora todas as categorias estarão presentes
         const categoryIds = productJson.Categories
           ? productJson.Categories.map((category) => category.id)
           : [];
 
-        // Remover o campo Categories e adicionar category_ids
         delete productJson.Categories;
         productJson.category_ids = categoryIds;
 
@@ -411,7 +316,6 @@ module.exports = {
 
       const productJson = product.toJSON();
 
-      // Converter Categories -> category_ids
       const categoryIds = productJson.Categories
         ? productJson.Categories.map((cat) => cat.id)
         : [];

@@ -1,5 +1,4 @@
 const CategoryService = require("../services/CategoryService");
-const { id, message } = require("../validations/userValidation");
 
 module.exports = {
   //busca de categorias

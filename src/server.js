@@ -9,7 +9,7 @@ require("./database");
 
 dotenv.config();
 
-const port = process.env.PORT || 8800;
+const port = process.env.PORT || 3300;
 const host = process.env.HOST || "localhost";
 const app = express();
 
