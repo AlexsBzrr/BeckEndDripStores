@@ -1,3 +1,3 @@
 module.exports = {
-  secret: "$2a$15$ly/AdFc/OBrRetmCYtWMOOFhRRFOCeAXM4vT0.keyys116OZQjDZK",
+  secret: "V3v.UWBKy2@{TA[Rc}z%;5M,gtL:sPCFneQ~jd4G(]q)#H^_9E",
 };

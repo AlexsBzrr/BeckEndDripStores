@@ -1,12 +1,14 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
+const authConfig = require("../config/auth");
 
 function generateToken(payload, expiresIn = "24h") {
-  const secret = process.env.JWT_SECRET;
-  const token = jwt.sign(payload, secret, { expiresIn });
+  const token = jwt.sign(payload, authConfig.secret, { expiresIn });
   try {
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, authConfig.secret);
+    console.log("Token gerado:", token);
+    console.log("Decoded payload:", decoded);
   } catch (error) {
     console.error("Erro ao verificar token criado:", error);
   }
@@ -90,17 +92,17 @@ module.exports = {
  * @swagger
  * tags:
  *   - name: Login
- *     description: Operações relacionadas a login
+ *     description: Operações relacionadas a autenticação
  */
+
 /**
  * @swagger
- * /v1/users/login:
+ * /v1/login:
  *   post:
  *     tags:
  *       - Login
- *     summary: Registra uma tentativa de login
- *     security:
- *       - bearerAuth: []
+ *     summary: Realiza login do usuário
+ *     description: Autentica o usuário com email e senha, retornando um token JWT
  *     requestBody:
  *       required: true
  *       content:
@@ -114,13 +116,19 @@ module.exports = {
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "john@example.com"
+ *                 example: "lucasalef@email.com.br"
+ *                 description: "Email do usuário"
  *               password:
  *                 type: string
- *                 example: "senha123"
+ *                 example: "123456"
+ *                 description: "Senha do usuário"
+ *
+ *
+ *
+ *
  *     responses:
  *       200:
- *         description: Registro de login criado com sucesso
+ *         description: Login realizado com sucesso
  *         content:
  *           application/json:
  *             schema:
@@ -128,19 +136,39 @@ module.exports = {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Login registrado com sucesso!"
- *                 login:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                     userId:
- *                       type: integer
- *                     status:
- *                       type: string
- *                     ipAddress:
- *                       type: string
- *                     timestamp:
- *                       type: string
- *                       format: date-time
+ *                   example: "Usuário logado com sucesso!"
+ *                 token:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNjM5NTc4MDAwLCJleHAiOjE2Mzk2NjQ0MDB9.abc123..."
+ *                   description: "Token JWT para autenticação (válido por 24h)"
+ *       400:
+ *         description: Dados inválidos ou credenciais incorretas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     missing_fields:
+ *                       value: "Email e senha são obrigatórios"
+ *                       summary: "Campos obrigatórios não fornecidos"
+ *                     invalid_credentials:
+ *                       value: "Email ou senha incorretos"
+ *                       summary: "Credenciais inválidas"
+ *       500:
+ *         description: Erro interno do servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Erro interno do servidor"
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ *                   description: "Detalhes do erro (apenas em desenvolvimento)"
  */

@@ -2,38 +2,25 @@ const CategoryService = require("../services/CategoryService");
 const { id, message } = require("../validations/userValidation");
 
 module.exports = {
-  //exibição de categorias/search com query params
+  //busca de categorias
   async search(req, res) {
     try {
-      // Query params com valores padrão
       let { limit = 12, page = 1, fields, use_in_menu } = req.query;
-
-      // Conversões de tipo
       limit = parseInt(limit);
       page = parseInt(page);
-
-      // Monta os parâmetros para o Sequelize
       const options = {
         where: {},
-        attributes: undefined,
+        attributes: ["id", "name", "slug", "use_in_menu"],
         limit: limit !== -1 ? limit : undefined,
         offset: limit !== -1 ? (page - 1) * limit : undefined,
       };
-
-      // Filtro por use_in_menu
       if (use_in_menu !== undefined) {
         options.where.use_in_menu = use_in_menu === "true";
       }
-
-      // Campos específicos
       if (fields) {
         options.attributes = fields.split(",").map((f) => f.trim());
       }
-
-      // Consulta via serviço
       const { rows, count } = await CategoryService.searchCategories(options);
-
-      // Retorno no formato esperado
       return res.status(200).json({
         data: rows,
         total: count,
@@ -55,6 +42,7 @@ module.exports = {
     if (!category)
       return res.status(404).json({ message: "Categoria nao encontrada." });
     return res.json({
+      id: category.id,
       name: category.name,
       slug: category.slug,
       use_in_menu: category.use_in_menu,
@@ -129,20 +117,21 @@ module.exports = {
   },
 };
 
-// Documentação da API
 /**
  * @swagger
  * tags:
- *   - name: Category
+ *   - name: Categories
  *     description: Operações relacionadas a categorias
  */
+
 /**
  * @swagger
  * /v1/category:
  *   post:
  *     tags:
- *       - Category
+ *       - Categories
  *     summary: Cria uma nova categoria
+ *     description: Cria uma nova categoria no sistema
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -154,15 +143,20 @@ module.exports = {
  *             required:
  *               - name
  *               - slug
- *
  *             properties:
  *               name:
  *                 type: string
  *                 example: "Shoes"
+ *                 description: "Nome da categoria (obrigatório)"
  *               slug:
  *                 type: string
  *                 example: "shoes"
- *
+ *                 description: "Slug único da categoria (obrigatório)"
+ *               use_in_menu:
+ *                 type: boolean
+ *                 default: false
+ *                 example: true
+ *                 description: "Define se a categoria aparece no menu"
  *     responses:
  *       201:
  *         description: Categoria criada com sucesso
@@ -173,132 +167,35 @@ module.exports = {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Categoria cadastrada com sucesso!"
- *       400:
- *         description: Erro nos dados enviados
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Dados inválidos ou incompletos"
- *                 error:
- *                   type: string
- *                   example: "Campo inválido enviado"
- *       401:
- *         description: Não autorizado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Token inválido ou ausente"
- */
-
-/**
- * @swagger
- * /v1/category/{id}:
- *   put:
- *     tags:
- *       - Category
- *     summary: Atualiza uma categoria existente
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID da categoria
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - slug
- *
- *             properties:
- *               name:
- *                 type: string
- *                 example: "Tênis"
- *               slug:
- *                 type: string
- *                 example: "tenis"
- *
- *     responses:
- *       200:
- *         description: Categoria atualizada com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Categoria atualizada com sucesso!"
+ *                   example: "Categoria criada com sucesso!"
+ *                 category:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     name:
+ *                       type: string
+ *                       example: "Shoes"
+ *                     slug:
+ *                       type: string
+ *                       example: "shoes"
+ *                     use_in_menu:
+ *                       type: boolean
+ *                       example: true
  *       400:
  *         description: Dados inválidos
- *       404:
- *         description: Categoria não encontrada
- *
- *   delete:
- *     tags:
- *       - Category
- *     summary: Deleta uma categoria
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID da categoria
- *     responses:
- *       204:
- *         description: Categoria deletada com sucesso (sem conteúdo)
- *       404:
- *         description: Categoria não encontrada
- */
-
-/**
- * @swagger
- * /v1/category:
- *   get:
- *     tags:
- *       - Category
- *     summary: Retorna a lista de categorias
- *     description: Retorna todas as categorias cadastradas
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de categorias
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                     example: 1
- *                   name:
- *                     type: string
- *                     example: "Shoes"
- *                   slug:
- *                     type: string
- *                     example: "shoes"
- *
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Erro ao criar categoria"
+ *                 error:
+ *                   type: string
+ *                   example: "Detalhes do erro de validação"
  *       401:
  *         description: Não autorizado
  *         content:
@@ -313,14 +210,94 @@ module.exports = {
 
 /**
  * @swagger
+ * /v1/category/search:
+ *   get:
+ *     tags:
+ *       - Categories
+ *     summary: Busca categorias com paginação e filtros
+ *     description: Retorna uma lista paginada de categorias com opções de filtro
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 12
+ *         description: "Número máximo de categorias por página (-1 para todas)"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: "Número da página"
+ *       - in: query
+ *         name: fields
+ *         schema:
+ *           type: string
+ *         example: "name,slug"
+ *         description: "Campos específicos para retornar (separados por vírgula)"
+ *       - in: query
+ *         name: use_in_menu
+ *         schema:
+ *           type: string
+ *           enum: ["true", "false"]
+ *         description: "Filtra categorias que aparecem no menu"
+ *     responses:
+ *       200:
+ *         description: Lista de categorias com informações de paginação
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: "Shoes"
+ *                       slug:
+ *                         type: string
+ *                         example: "shoes"
+ *                       use_in_menu:
+ *                         type: boolean
+ *                         example: true
+ *                 total:
+ *                   type: integer
+ *                   example: 25
+ *                 limit:
+ *                   type: integer
+ *                   example: 12
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *       500:
+ *         description: Erro interno do servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Erro ao buscar categorias"
+ *                 error:
+ *                   type: string
+ *                   example: "Detalhes do erro"
+ */
+
+/**
+ * @swagger
  * /v1/category/{id}:
  *   get:
  *     tags:
- *       - Category
+ *       - Categories
  *     summary: Busca uma categoria pelo ID
  *     description: Retorna os dados de uma categoria específica
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -336,16 +313,15 @@ module.exports = {
  *             schema:
  *               type: object
  *               properties:
- *                 id:
- *                   type: integer
- *                   example: 1
  *                 name:
  *                   type: string
  *                   example: "Shoes"
  *                 slug:
  *                   type: string
  *                   example: "shoes"
- *
+ *                 use_in_menu:
+ *                   type: boolean
+ *                   example: true
  *       404:
  *         description: Categoria não encontrada
  *         content:
@@ -355,7 +331,145 @@ module.exports = {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Categoria não encontrada"
- *       401:
- *         description: Não autorizado
+ *                   example: "Categoria nao encontrada."
+ *       500:
+ *         description: Erro interno do servidor
+ */
+
+/**
+ * @swagger
+ * /v1/category/{id}:
+ *   put:
+ *     tags:
+ *       - Categories
+ *     summary: Atualiza uma categoria existente
+ *     description: Atualiza dados de uma categoria existente
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da categoria
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Tênis"
+ *               slug:
+ *                 type: string
+ *                 example: "tenis"
+ *               use_in_menu:
+ *                 type: boolean
+ *                 example: false
+ *                 description: "Define se a categoria aparece no menu"
+ *     responses:
+ *       200:
+ *         description: Categoria atualizada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Categoria atualizada com sucesso!"
+ *                 category:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "Tênis"
+ *                     slug:
+ *                       type: string
+ *                       example: "tenis"
+ *                     use_in_menu:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Dados inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Erro ao atualizar a categoria."
+ *                 error:
+ *                   type: string
+ *                   example: "Detalhes do erro"
+ *       404:
+ *         description: Categoria não encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Categoria nao encontrada."
+ *       500:
+ *         description: Erro interno do servidor
+ */
+
+/**
+ * @swagger
+ * /v1/category/{id}:
+ *   delete:
+ *     tags:
+ *       - Categories
+ *     summary: Remove uma categoria existente
+ *     description: Deleta permanentemente uma categoria do sistema
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da categoria
+ *     responses:
+ *       200:
+ *         description: Categoria deletada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Categoria deletada com sucesso."
+ *       404:
+ *         description: Categoria não encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Categoria não encontrada."
+ *       500:
+ *         description: Erro interno do servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Erro ao deletar a categoria."
+ *                 error:
+ *                   type: string
+ *                   example: "Detalhes do erro"
+ *                   description: "Detalhes do erro (apenas em desenvolvimento)"
  */

@@ -1,36 +1,44 @@
 const { Model, DataTypes } = require("sequelize");
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class ProductCategory extends Model {
     static associate(models) {
-      // define association here
+      // Define as associações para os modelos Product e Category
+      ProductCategory.belongsTo(models.Product, { foreignKey: "product_id" });
+      ProductCategory.belongsTo(models.Category, { foreignKey: "category_id" });
     }
   }
+
   ProductCategory.init(
     {
-      ProductId: {
+      product_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         references: {
-          model: "Products",
+          model: "products",
           key: "id",
         },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
-      CategoryId: {
+      category_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         references: {
-          model: "Categories",
+          model: "categories",
           key: "id",
         },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
     },
     {
       sequelize,
       modelName: "ProductCategory",
-      tableName: "ProductCategory",
+      tableName: "productCategory", // ou "product_category" se for o nome real da tabela
       timestamps: false,
     }
   );
+
   return ProductCategory;
 };

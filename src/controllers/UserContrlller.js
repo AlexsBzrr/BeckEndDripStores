@@ -5,10 +5,32 @@ const userSchema = require("../validations/userValidation");
 //exibição de usuários
 module.exports = {
   async index(req, res) {
-    const users = await UserService.listUsers();
-    if (!users.length) return res.status(200).send("Nenhum usuário cadastrado");
-    return res.status(200).json({ users, total: users.length });
+    try {
+      const users = await UserService.listUsers({
+        attributes: {
+          exclude: ["createdAt", "updatedAt", "password"],
+        },
+      });
+
+      if (!users.length) {
+        return res.status(200).send("Nenhum usuário cadastrado");
+      }
+
+      return res.status(200).json({
+        message: "Usuários encontrados com sucesso",
+        users: users.map((user) => ({
+          id: user.id,
+          firstname: user.firstname,
+          surname: user.surname,
+          email: user.email,
+        })),
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Erro ao buscar usuários" });
+    }
   },
+
   //exibição de usuário pelo id
   async show(req, res) {
     const user = await UserService.findUserById(req.params.id);
@@ -100,7 +122,7 @@ module.exports = {
 
 /**
  * @swagger
- * /v1/users:
+ * /v1/user:
  *   get:
  *     tags:
  *       - Users
@@ -109,36 +131,43 @@ module.exports = {
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lista de usuários
+ *         description: Lista de usuários ou mensagem quando não há usuários
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                     example: 1
- *                   firstname:
- *                     type: string
- *                     example: "John"
- *                   surname:
- *                     type: string
- *                     example: "Doe"
- *                   email:
- *                     type: string
- *                     example: "john@example.com"
- *                   password:
- *                     type: string
- *                     example: "$2b$10$1234567890abcdefg"
+ *               oneOf:
+ *                 - type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                             example: 1
+ *                           firstname:
+ *                             type: string
+ *                             example: "John"
+ *                           surname:
+ *                             type: string
+ *                             example: "Doe"
+ *                           email:
+ *                             type: string
+ *                             example: "john@example.com"
+ *                           password:
+ *                             type: string
+ *                             example: "$2b$10$1234567890abcdefg"
+ *                     total:
+ *                       type: integer
+ *                       example: 1
+ *                 - type: string
+ *                   example: "Nenhum usuário cadastrado"
  *
  *   post:
  *     tags:
  *       - Users
  *     summary: Cria um novo usuário
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -150,6 +179,7 @@ module.exports = {
  *               - surname
  *               - email
  *               - password
+ *               - confirmPassword
  *             properties:
  *               firstname:
  *                 type: string
@@ -163,8 +193,11 @@ module.exports = {
  *               password:
  *                 type: string
  *                 example: "senha123"
+ *               confirmPassword:
+ *                 type: string
+ *                 example: "senha123"
  *     responses:
- *       200:
+ *       201:
  *         description: Usuário criado com sucesso
  *         content:
  *           application/json:
@@ -174,11 +207,42 @@ module.exports = {
  *                 message:
  *                   type: string
  *                   example: "Usuário criado com sucesso!"
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     firstname:
+ *                       type: string
+ *                       example: "John"
+ *                     surname:
+ *                       type: string
+ *                       example: "Doe"
+ *                     email:
+ *                       type: string
+ *                       example: "john@example.com"
+ *                 token:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Erro de validação ou erro ao criar usuário
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Erro de validação"
+ *                 error:
+ *                   type: string
+ *                   example: "\"firstname\" is required"
  */
 
 /**
  * @swagger
- * /v1/users/{id}:
+ * /v1/user/{id}:
  *   get:
  *     tags:
  *       - Users
@@ -194,15 +258,12 @@ module.exports = {
  *         description: ID do usuário
  *     responses:
  *       200:
- *         description: Usuário encontrado
+ *         description: Usuário encontrado (retorna apenas dados públicos)
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 id:
- *                   type: integer
- *                   example: 1
  *                 firstname:
  *                   type: string
  *                   example: "John"
@@ -221,7 +282,8 @@ module.exports = {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Usuário não encontrado"
+ *                   example: "Usuário nao encontrado"
+ *
  *   put:
  *     tags:
  *       - Users
@@ -241,11 +303,6 @@ module.exports = {
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - firstname
- *               - surname
- *               - email
- *               - password
  *             properties:
  *               firstname:
  *                 type: string
@@ -256,9 +313,7 @@ module.exports = {
  *               email:
  *                 type: string
  *                 example: "john@example.com"
- *               password:
- *                 type: string
- *                 example: "senha123"
+ *
  *     responses:
  *       200:
  *         description: Usuário atualizado com sucesso
@@ -270,6 +325,29 @@ module.exports = {
  *                 message:
  *                   type: string
  *                   example: "Usuário atualizado com sucesso!"
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     firstname:
+ *                       type: string
+ *                       example: "John"
+ *                     surname:
+ *                       type: string
+ *                       example: "Doe"
+ *                     email:
+ *                       type: string
+ *                       example: "john@example.com"
+ *       404:
+ *         description: Usuário não encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Usuário nao encontrado"
+ *
  *   delete:
  *     tags:
  *       - Users
@@ -294,4 +372,14 @@ module.exports = {
  *                 message:
  *                   type: string
  *                   example: "Usuário deletado com sucesso!"
+ *       404:
+ *         description: Usuário não encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Usuário nao encontrado"
  */

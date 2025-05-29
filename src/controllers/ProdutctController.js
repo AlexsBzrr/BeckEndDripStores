@@ -1,20 +1,90 @@
 const Product = require("../models/product");
 const Category = require("../models/category");
-const Images = require("../models/images");
+const Image = require("../models/images");
 const Option = require("../models/options");
-const { Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
+const updateProductSchema = require("../validations/updateProductSchema");
 
 module.exports = {
-  async index(req, res) {
-    try {
-      const products = await Product.findAll({
-        include: ["images", "options", "Categories"],
-      });
-      return res.json(products);
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
-    }
-  },
+  // Cria um novo produto
+  // async store(req, res) {
+  //   const transaction = await Product.sequelize.transaction();
+
+  //   try {
+  //     const {
+  //       enabled,
+  //       name,
+  //       slug,
+  //       stock,
+  //       description,
+  //       price,
+  //       price_with_discount,
+  //       category_ids,
+  //     } = req.body;
+
+  //     let options = [];
+  //     if (req.body.options) {
+  //       if (typeof req.body.options === "string") {
+  //         options = JSON.parse(req.body.options);
+  //       } else if (Array.isArray(req.body.options)) {
+  //         options = req.body.options;
+  //       }
+  //     }
+
+  //     const images = req.files;
+
+  //     const product = await Product.create(
+  //       {
+  //         enabled,
+  //         name,
+  //         slug,
+  //         stock,
+  //         description,
+  //         price,
+  //         price_with_discount,
+  //       },
+  //       { transaction }
+  //     );
+
+  //     if (category_ids && category_ids.length > 0) {
+  //       const categories = await Category.findAll({
+  //         where: { id: category_ids },
+  //         transaction,
+  //       });
+  //       await product.addCategories(categories, { transaction });
+  //     }
+
+  //     // Criando imagens
+  //     if (images && images.length > 0) {
+  //       const imagensValidas = images.map((file) => ({
+  //         path: `/uploads/${file.filename}`,
+  //         enabled: true,
+  //         ProductId: product.id,
+  //       }));
+
+  //       await Images.bulkCreate(imagensValidas, { transaction });
+  //     }
+
+  //     // Criando opções
+  //     if (Array.isArray(options) && options.length > 0) {
+  //       const opcoesValidas = options.map((opt) => ({
+  //         ...opt,
+  //         ProductId: product.id,
+  //       }));
+
+  //       await Option.bulkCreate(opcoesValidas, { transaction });
+  //     }
+
+  //     await transaction.commit();
+  //     return res
+  //       .status(201)
+  //       .json({ message: "Produto cadastrado com sucesso!", id: product.id });
+  //   } catch (error) {
+  //     await transaction.rollback();
+  //     console.error("Erro ao salvar produto:", error);
+  //     return res.status(500).json({ error: error.message });
+  //   }
+  // },
 
   async store(req, res) {
     const transaction = await Product.sequelize.transaction();
@@ -42,18 +112,50 @@ module.exports = {
 
       const images = req.files;
 
-      const product = await Product.create(
-        {
-          enabled,
-          name,
-          slug,
-          stock,
-          description,
-          price,
-          price_with_discount,
-        },
-        { transaction }
-      );
+      // Validate required fields
+      if (!name) {
+        await transaction.rollback();
+        return res.status(400).json({ error: "Name is required" });
+      }
+
+      // Generate slug if not provided
+      let finalSlug = slug;
+      if (!finalSlug) {
+        // Create slug from name: remove special chars, convert to lowercase, replace spaces with hyphens
+        finalSlug = name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // Remove accents
+          .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+          .trim()
+          .replace(/\s+/g, "-"); // Replace spaces with hyphens
+
+        // Check if slug already exists and make it unique if needed
+        const existingProduct = await Product.findOne({
+          where: { slug: finalSlug },
+          transaction,
+        });
+
+        if (existingProduct) {
+          const timestamp = Date.now();
+          finalSlug = `${finalSlug}-${timestamp}`;
+        }
+      }
+
+      // Prepare product data, ensuring all fields have values
+      const productData = {
+        enabled: enabled !== undefined ? enabled : true, // Default to true if not provided
+        name,
+        slug: finalSlug,
+        stock: stock !== undefined ? stock : 0, // Default to 0 if not provided
+        description: description || "", // Default to empty string if not provided
+        price: price || 0, // Default to 0 if not provided
+        price_with_discount: price_with_discount || null, // Can be null
+      };
+
+      console.log("Creating product with data:", productData); // Debug log
+
+      const product = await Product.create(productData, { transaction });
 
       if (category_ids && category_ids.length > 0) {
         const categories = await Category.findAll({
@@ -85,85 +187,407 @@ module.exports = {
       }
 
       await transaction.commit();
-      return res
-        .status(201)
-        .json({ message: "Produto cadastrado com sucesso!", id: product.id });
+      return res.status(201).json({
+        message: "Produto cadastrado com sucesso!",
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+      });
     } catch (error) {
       await transaction.rollback();
       console.error("Erro ao salvar produto:", error);
       return res.status(500).json({ error: error.message });
     }
   },
+  // Busca produtos
+  async search(req, res) {
+    try {
+      const {
+        limit = 12,
+        page = 1,
+        fields,
+        match,
+        category_ids,
+        "price-range": priceRange,
+        ...optionsQuery
+      } = req.query;
 
+      const parsedLimit = parseInt(limit);
+      const parsedPage = parseInt(page);
+      const offset =
+        parsedLimit > 0 ? (parsedPage - 1) * parsedLimit : undefined;
+
+      // Define valid Product attributes based on the model
+      const validProductAttributes = [
+        "id",
+        "enabled",
+        "name",
+        "slug",
+        "stock",
+        "description",
+        "price",
+        "price_with_discount",
+      ];
+      const attributes = fields
+        ? fields
+            .split(",")
+            .filter((field) => validProductAttributes.includes(field.trim()))
+        : validProductAttributes;
+
+      // Condições do WHERE principal
+      const where = {};
+      if (match) {
+        where[Op.or] = [
+          Sequelize.where(
+            Sequelize.fn("LOWER", Sequelize.col("Product.name")),
+            {
+              [Op.like]: `%${match.toLowerCase()}%`,
+            }
+          ),
+          Sequelize.where(
+            Sequelize.fn("LOWER", Sequelize.col("Product.description")),
+            {
+              [Op.like]: `%${match.toLowerCase()}%`,
+            }
+          ),
+        ];
+      }
+
+      if (priceRange) {
+        const [min, max] = priceRange.split("-").map(Number);
+        where.price = { [Op.between]: [min, max] };
+      }
+
+      // Filtro por categorias (tabela de junção)
+      // Filtro por categorias (tabela de junção)
+      const categoryFilterForWhere = category_ids
+        ? {
+            model: Category,
+            as: "FilterCategories",
+            attributes: [],
+            where: {
+              id: {
+                [Op.in]: category_ids.split(",").map(Number),
+              },
+            },
+            through: { attributes: [] },
+            required: true, // This is causing the issue
+          }
+        : null;
+
+      const categoryInclude = {
+        model: Category,
+        as: "Categories",
+        attributes: ["id"],
+        through: { attributes: [] },
+        required: false,
+      };
+
+      // Filtro por opções (option[45]=PP,GG)
+      const optionFilters = [];
+      for (const key in optionsQuery) {
+        const match = key.match(/^option\[(\d+)\]$/);
+        if (match) {
+          const optionId = parseInt(match[1]);
+          const values = optionsQuery[key].split(",");
+          optionFilters.push({
+            id: optionId,
+            values: { [Op.in]: values },
+          });
+        }
+      }
+
+      const include = [
+        {
+          model: Image,
+          as: "images",
+          attributes: ["id", "path"],
+          required: false,
+        },
+        {
+          model: Option,
+          as: "options",
+          where: optionFilters.length ? { [Op.or]: optionFilters } : undefined,
+          required: optionFilters.length > 0,
+          attributes: [
+            "id",
+            "title",
+            "shape",
+            "radius",
+            "type",
+            "values",
+            "product_id",
+          ],
+        },
+        categoryInclude,
+      ];
+      if (categoryFilterForWhere) {
+        include.push(categoryFilterForWhere);
+      }
+
+      // Get the count first with a simpler query to avoid distinct issues
+      const totalCount = await Product.count({
+        where,
+        include: include.map((inc) => ({
+          ...inc,
+          attributes: [], // Remove attributes for count to optimize
+        })),
+        distinct: true,
+      });
+
+      // Then get the actual data without distinct to preserve all relationships
+      const products = await Product.findAll({
+        where,
+        attributes,
+        include,
+        limit: parsedLimit > 0 ? parsedLimit : undefined,
+        offset: parsedLimit > 0 ? offset : undefined,
+        order: [["id", "ASC"]],
+      });
+
+      // Mapear os resultados para transformar Categories em category_ids
+      const mappedData = products.map((product) => {
+        const productJson = product.toJSON();
+
+        // Extrair os IDs das categorias - agora todas as categorias estarão presentes
+        const categoryIds = productJson.Categories
+          ? productJson.Categories.map((category) => category.id)
+          : [];
+
+        // Remover o campo Categories e adicionar category_ids
+        delete productJson.Categories;
+        productJson.category_ids = categoryIds;
+
+        return productJson;
+      });
+
+      return res.json({
+        data: mappedData,
+        total: totalCount,
+        limit: parsedLimit > 0 ? parsedLimit : -1,
+        page: parsedPage > 0 ? parsedPage : 1,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: error.message });
+    }
+  },
+  // visualizar um produto especifico pelo id
   async show(req, res) {
     const { id } = req.params;
     try {
       const product = await Product.findByPk(id, {
-        include: ["images", "options", "Categories"],
+        attributes: {
+          exclude: ["createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            association: "images",
+            attributes: ["id", "path"],
+          },
+          {
+            association: "options",
+            attributes: [
+              "id",
+              "title",
+              "shape",
+              "radius",
+              "type",
+              "values",
+              "product_id",
+            ],
+          },
+          {
+            association: "Categories",
+            attributes: ["id"],
+            through: { attributes: [] },
+          },
+        ],
       });
-      return res.json(product);
+
+      if (!product) {
+        return res.status(404).json({ error: "Produto não encontrado" });
+      }
+
+      const productJson = product.toJSON();
+
+      // Converter Categories -> category_ids
+      const categoryIds = productJson.Categories
+        ? productJson.Categories.map((cat) => cat.id)
+        : [];
+
+      delete productJson.Categories;
+      productJson.category_ids = categoryIds;
+
+      return res.json({ product: productJson });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      console.error("Erro ao buscar produto:", error);
+      return res
+        .status(500)
+        .json({ error: error.message, message: "Erro ao buscar produto" });
     }
   },
 
+  // atualizar um produto
   async update(req, res) {
     const { id } = req.params;
-    try {
-      const [updated] = await Product.update(req.body, { where: { id } });
-      if (!updated)
-        return res.status(404).json({ error: "Produto não encontrado" });
+    const productId = Number(id);
+    const transaction = await Product.sequelize.transaction();
 
-      const updatedProduct = await Product.findByPk(id, {
-        include: ["images", "options", "Categories"],
+    // Validação com schema Joi
+    const { error, value } = updateProductSchema.validate(req.body, {
+      abortEarly: false,
+    });
+
+    if (error) {
+      await transaction.rollback();
+      return res.status(400).json({
+        error: "Dados inválidos",
+        details: error.details.map((e) => e.message),
       });
+    }
+
+    try {
+      const {
+        enabled,
+        name,
+        slug,
+        stock,
+        description,
+        price,
+        price_with_discount,
+        category_ids,
+        options: rawOptions,
+      } = value;
+
+      const updatedFields = {
+        ...(enabled !== undefined && { enabled }),
+        ...(name && { name }),
+        ...(slug && { slug }),
+        ...(stock !== undefined && { stock }),
+        ...(description && { description }),
+        ...(price !== undefined && { price }),
+        ...(price_with_discount !== undefined && { price_with_discount }),
+      };
+
+      // Parse das opções
+      let options = [];
+      if (rawOptions) {
+        if (typeof rawOptions === "string") {
+          options = JSON.parse(rawOptions);
+        } else {
+          options = rawOptions;
+        }
+      }
+
+      const images = req.files;
+
+      const [updated] = await Product.update(updatedFields, {
+        where: { id: productId },
+        transaction,
+      });
+
+      if (!updated) {
+        await transaction.rollback();
+        return res.status(404).json({ error: "Produto não encontrado" });
+      }
+
+      const product = await Product.findByPk(productId, { transaction });
+
+      // Atualiza categorias
+      if (category_ids && category_ids.length > 0) {
+        const categories = await Category.findAll({
+          where: { id: category_ids },
+          transaction,
+        });
+        await product.setCategories(categories, { transaction });
+      }
+
+      // Atualiza imagens
+      if (images && images.length > 0) {
+        await Image.destroy({ where: { ProductId: productId }, transaction });
+
+        const novasImagens = images.map((file) => ({
+          path: `/uploads/${file.filename}`,
+          enabled: true,
+          ProductId: productId,
+        }));
+        await Image.bulkCreate(novasImagens, { transaction });
+      }
+
+      // Atualiza opções
+      if (Array.isArray(options) && options.length > 0) {
+        await Option.destroy({ where: { ProductId: productId }, transaction });
+
+        const novasOpcoes = options.map((opt) => ({
+          ...opt,
+          ProductId: productId,
+          values:
+            typeof opt.values === "string"
+              ? opt.values
+              : JSON.stringify(opt.values),
+        }));
+        await Option.bulkCreate(novasOpcoes, { transaction });
+      }
+
+      await transaction.commit();
+
+      const updatedProduct = await Product.findByPk(productId, {
+        include: [
+          {
+            model: Image,
+            as: "images",
+            attributes: ["id", "path"],
+          },
+          {
+            model: Option,
+            as: "options",
+            attributes: [
+              "id",
+              "title",
+              "shape",
+              "radius",
+              "type",
+              "values",
+              "product_id",
+            ],
+          },
+          {
+            model: Category,
+            as: "Categories",
+            attributes: ["id"],
+            through: { attributes: [] },
+          },
+        ],
+      });
+
+      const productJson = updatedProduct.toJSON();
+      const categoryIds = productJson.Categories?.map((cat) => cat.id) || [];
+
+      delete productJson.Categories;
+      productJson.category_ids = categoryIds;
 
       return res.json({
         message: "Produto atualizado com sucesso",
-        product: updatedProduct,
+        product: productJson,
       });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+    } catch (err) {
+      await transaction.rollback();
+      console.error("Erro ao atualizar produto:", err);
+      return res
+        .status(500)
+        .json({ error: "Erro interno ao atualizar produto" });
     }
   },
 
+  // deletar um produto
   async delete(req, res) {
     const { id } = req.params;
     try {
       const deleted = await Product.destroy({ where: { id } });
       if (!deleted)
         return res.status(404).json({ error: "Produto não encontrado" });
-      return res.status(204).send();
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
-    }
-  },
-
-  async search(req, res) {
-    const { name } = req.params;
-    try {
-      const products = await Product.findAll({
-        where: { name: { [Op.iLike]: `%${name}%` } },
-        include: ["images", "options", "Categories"],
-      });
-      return res.json(products);
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
-    }
-  },
-
-  async searchCategory(req, res) {
-    const { category } = req.params;
-    try {
-      const products = await Product.findAll({
-        include: [
-          {
-            model: Category,
-            where: { name: { [Op.iLike]: `%${category}%` } },
-          },
-        ],
-      });
-      return res.json(products);
+      return res.status(200).json({ message: "Produto deletado com sucesso!" });
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
@@ -172,85 +596,76 @@ module.exports = {
 
 /**
  * @swagger
+ * tags:
+ *   - name: Products
+ *     description: Operações relacionadas a produtos
+ */
+
+/**
+ * @swagger
  * /v1/product:
  *   post:
  *     tags:
  *       - Products
  *     summary: Cria um novo produto
+ *     description: Cria um novo produto com imagens, opções e categorias
  *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
  *               - name
- *               - slug
- *               - price
  *             properties:
  *               enabled:
  *                 type: boolean
+ *                 default: true
  *                 example: true
  *               name:
  *                 type: string
- *                 example: "Produto 01"
+ *                 example: "Produto Exemplo"
+ *                 description: "Nome do produto (obrigatório)"
  *               slug:
  *                 type: string
- *                 example: "produto-01"
+ *                 example: "produto-exemplo"
+ *                 description: "Slug único (gerado automaticamente se não fornecido)"
  *               stock:
  *                 type: integer
+ *                 default: 0
  *                 example: 10
  *               description:
  *                 type: string
- *                 example: "Descrição do produto 01"
+ *                 default: ""
+ *                 example: "Descrição detalhada do produto"
  *               price:
  *                 type: number
  *                 format: float
+ *                 default: 0
  *                 example: 119.90
  *               price_with_discount:
  *                 type: number
  *                 format: float
  *                 example: 99.90
+ *                 description: "Preço com desconto (opcional)"
  *               category_ids:
  *                 type: array
  *                 items:
  *                   type: integer
- *                 example: [1, 15, 24, 68]
- *               images:
+ *                 example: [1, 15, 24]
+ *                 description: "IDs das categorias associadas"
+ *               files:
  *                 type: array
  *                 items:
- *                   type: object
- *                   properties:
- *                     type:
- *                       type: string
- *                       example: "image/png"
- *                     content:
- *                       type: string
- *                       example: "base64 da imagem"
+ *                   type: string
+ *                   format: binary
+ *                 description: "Arquivos de imagem do produto"
  *               options:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     title:
- *                       type: string
- *                       example: "Cor"
- *                     shape:
- *                       type: string
- *                       example: "square"
- *                     radius:
- *                       type: string
- *                       example: "4px"
- *                     type:
- *                       type: string
- *                       example: "text"
- *                     value:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ["PP", "GG", "M"]
+ *                 type: string
+ *                 example: '[{"title":"Tamanho","shape":"square","radius":"4px","type":"text","values":["P","M","G"]}]'
+ *                 description: "JSON string ou array com opções do produto"
  *     responses:
  *       201:
  *         description: Produto criado com sucesso
@@ -265,59 +680,176 @@ module.exports = {
  *                 id:
  *                   type: integer
  *                   example: 42
+ *                 name:
+ *                   type: string
+ *                   example: "Produto Exemplo"
+ *                 slug:
+ *                   type: string
+ *                   example: "produto-exemplo"
  *       400:
  *         description: Dados inválidos
- *       401:
- *         description: Não autorizado
- */
-/**
- * @swagger
- * /v1/product:
- *   get:
- *     tags:
- *       - Products
- *     summary: Lista todos os produtos
- *     description: Retorna todos os produtos cadastrados
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de produtos
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                     example: 1
- *                   name:
- *                     type: string
- *                     example: "Produto 01"
- *                   slug:
- *                     type: string
- *                     example: "produto-01"
- *                   price:
- *                     type: number
- *                     example: 119.9
- *                   price_with_discount:
- *                     type: number
- *                     example: 99.9
- *       401:
- *         description: Não autorizado
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Name is required"
+ *       500:
+ *         description: Erro interno do servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
  */
+
 /**
  * @swagger
- * v1/product/{id}:
+ * /v1/product/search:
+ *   get:
+ *     tags:
+ *       - Products
+ *     summary: Busca produtos com filtros avançados
+ *     description: Busca produtos com paginação, filtros por categoria, preço, opções e busca por texto
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 12
+ *         description: "Limite de produtos por página"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: "Número da página"
+ *       - in: query
+ *         name: fields
+ *         schema:
+ *           type: string
+ *         example: "id,name,price,slug"
+ *         description: "Campos específicos para retornar (separados por vírgula)"
+ *       - in: query
+ *         name: match
+ *         schema:
+ *           type: string
+ *         example: "bermuda"
+ *         description: "Busca por texto no nome ou descrição"
+ *       - in: query
+ *         name: category_ids
+ *         schema:
+ *           type: string
+ *         example: ""
+ *         description: "IDs das categorias (separados por vírgula)"
+ *       - in: query
+ *         name: price-range
+ *         schema:
+ *           type: string
+ *         example: "200"
+ *         description: "Faixa de preço (min-max)"
+ *       - in: query
+ *         name: option[45]
+ *         schema:
+ *           type: string
+ *         example: "M"
+ *         description: "Filtro por opção específica (option[ID_OPCAO]=valores)"
+ *     responses:
+ *       200:
+ *         description: Lista de produtos encontrados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       enabled:
+ *                         type: boolean
+ *                         example: true
+ *                       name:
+ *                         type: string
+ *                         example: "Produto Exemplo"
+ *                       slug:
+ *                         type: string
+ *                         example: "produto-exemplo"
+ *                       stock:
+ *                         type: integer
+ *                         example: 10
+ *                       description:
+ *                         type: string
+ *                         example: "Descrição do produto"
+ *                       price:
+ *                         type: number
+ *                         example: 119.90
+ *                       price_with_discount:
+ *                         type: number
+ *                         example: 99.90
+ *                       category_ids:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [1, 2]
+ *                       images:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: integer
+ *                             path:
+ *                               type: string
+ *                       options:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: integer
+ *                             title:
+ *                               type: string
+ *                             shape:
+ *                               type: string
+ *                             radius:
+ *                               type: string
+ *                             type:
+ *                               type: string
+ *                             values:
+ *                               type: string
+ *                             product_id:
+ *                               type: integer
+ *                 total:
+ *                   type: integer
+ *                   example: 25
+ *                 limit:
+ *                   type: integer
+ *                   example: 12
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *       500:
+ *         description: Erro interno do servidor
+ */
+
+/**
+ * @swagger
+ * /v1/product/{id}:
  *   get:
  *     tags:
  *       - Products
  *     summary: Busca um produto pelo ID
- *     description: Retorna os dados de um produto específico
- *     security:
- *       - bearerAuth: []
+ *     description: Retorna os dados completos de um produto específico
  *     parameters:
  *       - in: path
  *         name: id
@@ -333,23 +865,80 @@ module.exports = {
  *             schema:
  *               type: object
  *               properties:
- *                 id:
- *                   type: integer
- *                   example: 1
- *                 name:
- *                   type: string
- *                   example: "Produto 01"
- *                 slug:
- *                   type: string
- *                   example: "produto-01"
- *                 price:
- *                   type: number
- *                   example: 119.9
+ *                 product:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     enabled:
+ *                       type: boolean
+ *                       example: true
+ *                     name:
+ *                       type: string
+ *                       example: "Produto Exemplo"
+ *                     slug:
+ *                       type: string
+ *                       example: "produto-exemplo"
+ *                     stock:
+ *                       type: integer
+ *                       example: 10
+ *                     description:
+ *                       type: string
+ *                       example: "Descrição do produto"
+ *                     price:
+ *                       type: number
+ *                       example: 119.90
+ *                     price_with_discount:
+ *                       type: number
+ *                       example: 99.90
+ *                     category_ids:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [1, 2]
+ *                     images:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           path:
+ *                             type: string
+ *                     options:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           title:
+ *                             type: string
+ *                           shape:
+ *                             type: string
+ *                           radius:
+ *                             type: string
+ *                           type:
+ *                             type: string
+ *                           values:
+ *                             type: string
+ *                           product_id:
+ *                             type: integer
  *       404:
  *         description: Produto não encontrado
- *       401:
- *         description: Não autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Produto não encontrado"
+ *       500:
+ *         description: Erro interno do servidor
  */
+
 /**
  * @swagger
  * /v1/product/{id}:
@@ -357,6 +946,7 @@ module.exports = {
  *     tags:
  *       - Products
  *     summary: Atualiza um produto existente
+ *     description: Atualiza dados do produto, incluindo imagens, opções e categorias
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -369,35 +959,128 @@ module.exports = {
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
+ *               enabled:
+ *                 type: boolean
+ *                 example: true
  *               name:
  *                 type: string
  *                 example: "Produto Atualizado"
  *               slug:
  *                 type: string
  *                 example: "produto-atualizado"
- *               price:
- *                 type: number
- *                 example: 129.9
  *               stock:
  *                 type: integer
  *                 example: 5
- *               enabled:
- *                 type: boolean
- *                 example: true
+ *               description:
+ *                 type: string
+ *                 example: "Nova descrição do produto"
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 example: 129.90
+ *               price_with_discount:
+ *                 type: number
+ *                 format: float
+ *                 example: 109.90
+ *               category_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 3, 5]
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: "Novas imagens (substituem as existentes)"
+ *               options:
+ *                 type: string
+ *                 example: '[{"title":"Cor","type":"text","values":["Azul","Verde"]}]'
+ *                 description: "Novas opções (substituem as existentes)"
  *     responses:
  *       200:
  *         description: Produto atualizado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Produto atualizado com sucesso"
+ *                 product:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     enabled:
+ *                       type: boolean
+ *                       example: true
+ *                     name:
+ *                       type: string
+ *                       example: "Produto Atualizado"
+ *                     slug:
+ *                       type: string
+ *                       example: "produto-atualizado"
+ *                     stock:
+ *                       type: integer
+ *                       example: 5
+ *                     description:
+ *                       type: string
+ *                       example: "Nova descrição do produto"
+ *                     price:
+ *                       type: number
+ *                       example: 129.90
+ *                     price_with_discount:
+ *                       type: number
+ *                       example: 109.90
+ *                     category_ids:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [1, 3, 5]
+ *                     images:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     options:
+ *                       type: array
+ *                       items:
+ *                         type: object
  *       400:
  *         description: Dados inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Dados inválidos"
+ *                 details:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["name must be a string"]
  *       404:
  *         description: Produto não encontrado
- *       401:
- *         description: Não autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Produto não encontrado"
+ *       500:
+ *         description: Erro interno do servidor
  */
+
 /**
  * @swagger
  * /v1/product/{id}:
@@ -405,6 +1088,7 @@ module.exports = {
  *     tags:
  *       - Products
  *     summary: Remove um produto existente
+ *     description: Deleta permanentemente um produto do sistema
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -415,10 +1099,38 @@ module.exports = {
  *           type: integer
  *         description: ID do produto
  *     responses:
- *       204:
- *         description: Produto deletado com sucesso (sem conteúdo)
+ *       200:
+ *         description: Produto deletado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Produto deletado com sucesso!"
  *       404:
  *         description: Produto não encontrado
- *       401:
- *         description: Não autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Produto não encontrado"
+ *       500:
+ *         description: Erro interno do servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Database error"
+ *                   description: "Detalhes do erro (apenas em desenvolvimento)"
+ *                 message:
+ *                   type: string
+ *                   example: "Erro interno do servidor"
  */
