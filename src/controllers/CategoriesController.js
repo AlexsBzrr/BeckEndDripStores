@@ -1,4 +1,5 @@
 const CategoryService = require("../services/CategoryService");
+const categorySchema = require("../validations/categorySchema");
 
 module.exports = {
   //busca de categorias
@@ -50,46 +51,103 @@ module.exports = {
 
   //criação de categorias
   async store(req, res) {
-    const { name, slug, use_in_menu } = req.body;
     try {
-      const category = await CategoryService.createCategory(
-        name,
-        slug,
-        use_in_menu
-      );
-      return res.status(201).send({
+      const { error, value } = categorySchema.validate(req.body, {
+        stripUnknown: true,
+        abortEarly: false,
+      });
+      if (error) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.details.map((detail) => {
+            const campo = detail.path.join(".");
+            const tipoErro = detail.type;
+            switch (tipoErro) {
+              case "string.base":
+                return `${campo} tem que ser string`;
+              case "string.empty":
+                return `${campo} não pode estar vazio`;
+              case "any.required":
+                return `${campo} é obrigatório`;
+              case "number.base":
+                return `${campo} tem que ser número`;
+              default:
+                return `${campo}: ${detail.message}`;
+            }
+          }),
+        });
+      }
+      const category = await CategoryService.createCategory(value);
+      return res.status(201).json({
         message: "Categoria criada com sucesso!",
-        category,
-      });
-    } catch (error) {
-      return res.status(400).send({
-        message: "Erro ao criar categoria",
-        error: error.message,
-      });
-    }
-  },
-
-  async update(req, res) {
-    const { name, slug } = req.body;
-
-    try {
-      const category = await CategoryService.updateCategory(
-        req.params.id,
-        req.body
-      );
-      if (!category)
-        return res.status(404).json({ message: "Categoria nao encontrada." });
-      return res.status(200).send({
-        message: "Categoria atualizada com sucesso!",
         category: {
+          id: category.id,
           name: category.name,
           slug: category.slug,
           use_in_menu: category.use_in_menu,
         },
       });
     } catch (error) {
-      return res.status(400).send({
-        message: "Erro ao atualizar a categoria.",
+      console.error("Erro no CategoryController.store:", error);
+      console.error("Error stack:", error.stack);
+      return res.status(500).json({
+        message: "Erro interno do servidor",
+        error: error.message,
+      });
+    }
+  },
+
+  async update(req, res) {
+    try {
+      const { error, value } = categorySchema.validate(req.body, {
+        stripUnknown: true,
+        abortEarly: false,
+      });
+      if (error) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.details.map((detail) => {
+            const campo = detail.path.join(".");
+            const tipoErro = detail.type;
+            switch (tipoErro) {
+              case "string.base":
+                return `${campo} tem que ser string`;
+              case "string.empty":
+                return `${campo} não pode estar vazio`;
+              case "any.required":
+                return `${campo} é obrigatório`;
+              case "number.base":
+                return `${campo} tem que ser número`;
+              default:
+                return `${campo}: ${detail.message}`;
+            }
+          }),
+        });
+      }
+
+      const category = await CategoryService.updateCategory(
+        req.params.id,
+        value
+      );
+      if (!category) {
+        return res.status(404).json({
+          message: "Categoria não encontrada.",
+        });
+      }
+      return res.status(200).json({
+        message: "Categoria atualizada com sucesso!",
+        category: {
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          use_in_menu: category.use_in_menu,
+        },
+      });
+    } catch (error) {
+      console.error("Erro no CategoryController.update:", error);
+      console.error("Error stack:", error.stack);
+      return res.status(500).json({
+        message: "Erro interno do servidor",
         error: error.message,
       });
     }
@@ -103,7 +161,6 @@ module.exports = {
       if (deletedCount === 0) {
         return res.status(404).json({ message: "Categoria não encontrada." });
       }
-
       return res
         .status(200)
         .json({ message: "Categoria deletada com sucesso." });

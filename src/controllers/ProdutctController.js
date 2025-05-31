@@ -87,7 +87,7 @@ module.exports = {
           ProductId: product.id,
         }));
 
-        await Images.bulkCreate(imagensValidas, { transaction });
+        await images.bulkCreate(imagensValidas, { transaction });
       }
 
       // Criando opções
@@ -518,7 +518,7 @@ module.exports = {
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *          application/json:
  *           schema:
  *             type: object
  *             required:
@@ -568,7 +568,14 @@ module.exports = {
  *                 description: "Arquivos de imagem do produto"
  *               options:
  *                 type: string
- *                 example: '[{"title":"Tamanho","shape":"square","radius":"4px","type":"text","values":["P","M","G"]}]'
+ *                 example:
+ *                   '[{
+ *                   "title":"Tamanho",
+ *                   "shape":"square",
+ *                   "radius":"4px",
+ *                   "type":"text",
+ *                   "values":["P","M","G"]
+ *                  }]'
  *                 description: "JSON string ou array com opções do produto"
  *     responses:
  *       201:
@@ -655,13 +662,13 @@ module.exports = {
  *         name: price-range
  *         schema:
  *           type: string
- *         example: "200"
+ *         example: ""
  *         description: "Faixa de preço (min-max)"
  *       - in: query
  *         name: option[45]
  *         schema:
  *           type: string
- *         example: "M"
+ *         example: ""
  *         description: "Filtro por opção específica (option[ID_OPCAO]=valores)"
  *     responses:
  *       200:

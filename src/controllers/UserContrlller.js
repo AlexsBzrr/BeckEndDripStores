@@ -155,9 +155,7 @@ module.exports = {
  *                           email:
  *                             type: string
  *                             example: "john@example.com"
- *                           password:
- *                             type: string
- *                             example: "$2b$10$1234567890abcdefg"
+
  *                     total:
  *                       type: integer
  *                       example: 1

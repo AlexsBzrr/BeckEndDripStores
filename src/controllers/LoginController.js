@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const authConfig = require("../config/auth");
 
-function generateToken(payload, expiresIn = "24h") {
+function generateToken(payload, expiresIn = "1h") {
   const token = jwt.sign(payload, authConfig.secret, { expiresIn });
   try {
     const decoded = jwt.verify(token, authConfig.secret);
