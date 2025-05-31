@@ -1,5 +1,3 @@
-// models/Login.js
-
 module.exports = (sequelize, DataTypes) => {
   const Login = sequelize.define("Login", {
     userId: {
