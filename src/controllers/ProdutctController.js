@@ -2,13 +2,14 @@ const Product = require("../models/product");
 const Category = require("../models/category");
 const Image = require("../models/images");
 const Option = require("../models/options");
-const { Op, Sequelize } = require("sequelize");
+const { Op } = require("sequelize");
+const { sequelize } = require("../database");
 const updateProductSchema = require("../validations/updateProductSchema");
 
 module.exports = {
+  // criar um produto
   async store(req, res) {
-    const transaction = await Product.sequelize.transaction();
-
+    const transaction = await sequelize.transaction();
     try {
       const {
         enabled,
@@ -21,22 +22,107 @@ module.exports = {
         category_ids,
       } = req.body;
 
-      let options = [];
-      if (req.body.options) {
-        if (typeof req.body.options === "string") {
-          options = JSON.parse(req.body.options);
-        } else if (Array.isArray(req.body.options)) {
-          options = req.body.options;
-        }
-      }
-
-      const images = req.files;
-
-      if (!name) {
+      // === VALIDAÇÕES INICIAIS ===
+      if (!name || name.trim() === "") {
         await transaction.rollback();
         return res.status(400).json({ error: "Name is required" });
       }
 
+      // PARSE E VALIDAÇÃO DE OPTIONS
+      let options = [];
+      if (req.body.options) {
+        try {
+          if (typeof req.body.options === "string") {
+            options = JSON.parse(req.body.options);
+          } else if (Array.isArray(req.body.options)) {
+            options = req.body.options;
+          }
+        } catch {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: "Formato inválido para options. Deve ser JSON válido.",
+          });
+        }
+      }
+
+      // PARSE E VALIDAÇÃO DE CATEGORIAS
+      let parsedCategoryIds = [];
+      if (category_ids) {
+        try {
+          if (typeof category_ids === "string") {
+            if (category_ids.startsWith("[")) {
+              parsedCategoryIds = JSON.parse(category_ids);
+            } else {
+              parsedCategoryIds = category_ids
+                .split(",")
+                .map((id) => parseInt(id.trim()));
+            }
+          } else if (Array.isArray(category_ids)) {
+            parsedCategoryIds = category_ids.map((id) => parseInt(id));
+          } else {
+            parsedCategoryIds = [parseInt(category_ids)];
+          }
+          parsedCategoryIds = parsedCategoryIds.filter(
+            (id) => !isNaN(id) && id > 0
+          );
+        } catch {
+          await transaction.rollback();
+          return res.status(400).json({
+            error:
+              "Formato inválido para category_ids. Use array de números ou string separada por vírgulas.",
+          });
+        }
+      }
+
+      // VALIDAÇÃO DE PREÇOS
+      const parsedPrice = parseFloat(price) || 0;
+      const parsedPriceWithDiscount = price_with_discount
+        ? parseFloat(price_with_discount)
+        : null;
+
+      if (parsedPrice < 0) {
+        await transaction.rollback();
+        return res.status(400).json({ error: "Price cannot be negative" });
+      }
+
+      if (parsedPriceWithDiscount !== null && parsedPriceWithDiscount < 0) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json({ error: "Price with discount cannot be negative" });
+      }
+
+      if (
+        parsedPriceWithDiscount !== null &&
+        parsedPriceWithDiscount >= parsedPrice
+      ) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: "Price with discount must be lower than regular price",
+        });
+      }
+
+      // VALIDAÇÃO DE ESTOQUE
+      const parsedStock = parseInt(stock) || 0;
+      if (parsedStock < 0) {
+        await transaction.rollback();
+        return res.status(400).json({ error: "Stock cannot be negative" });
+      }
+
+      // VALIDAÇÃO DE NOME ÚNICO
+      const existingProductWithName = await Product.findOne({
+        where: { name: name.trim() },
+        transaction,
+      });
+
+      if (existingProductWithName) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json({ error: "Já existe um produto com este nome" });
+      }
+
+      // GERAÇÃO E VALIDAÇÃO DE SLUG
       let finalSlug = slug;
       if (!finalSlug) {
         finalSlug = name
@@ -51,69 +137,165 @@ module.exports = {
           where: { slug: finalSlug },
           transaction,
         });
-
         if (existingProduct) {
-          const timestamp = Date.now();
-          finalSlug = `${finalSlug}-${timestamp}`;
+          finalSlug = `${finalSlug}-${Date.now()}`;
+        }
+      } else {
+        const existingSlug = await Product.findOne({
+          where: { slug: finalSlug },
+          transaction,
+        });
+        if (existingSlug) {
+          await transaction.rollback();
+          return res
+            .status(400)
+            .json({ error: "Já existe um produto com este slug" });
         }
       }
 
-      const productData = {
-        enabled: enabled !== undefined ? enabled : true,
-        name,
-        slug: finalSlug,
-        stock: stock !== undefined ? stock : 0,
-        description: description || "",
-        price: price || 0,
-        price_with_discount: price_with_discount || null,
-      };
-
-      console.log("Creating product with data:", productData);
-      const product = await Product.create(productData, { transaction });
-
-      if (category_ids && category_ids.length > 0) {
-        const categories = await Category.findAll({
-          where: { id: category_ids },
-          transaction,
-        });
-        await product.addCategories(categories, { transaction });
+      // VALIDAÇÃO DE IMAGENS (req.files) - Máximo 10
+      const images = req.files;
+      if (images && images.length > 10) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json({ error: "Máximo de 10 imagens permitidas por produto" });
       }
 
-      // Criando imagens
+      // VALIDAÇÃO DE CATEGORIAS EXISTENTES
+      if (parsedCategoryIds.length > 0) {
+        const existingCategories = await Category.findAll({
+          where: { id: parsedCategoryIds },
+          transaction,
+        });
+
+        if (existingCategories.length !== parsedCategoryIds.length) {
+          const foundIds = existingCategories.map((cat) => cat.id);
+          const invalidIds = parsedCategoryIds.filter(
+            (id) => !foundIds.includes(id)
+          );
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `Categorias não encontradas: ${invalidIds.join(", ")}`,
+          });
+        }
+      }
+
+      // CRIAR PRODUTO
+      const productData = {
+        enabled: enabled !== undefined ? Boolean(enabled) : true,
+        name: name.trim(),
+        slug: finalSlug,
+        stock: parsedStock,
+        description: description || "",
+        price: parsedPrice,
+        price_with_discount: parsedPriceWithDiscount,
+      };
+
+      const product = await Product.create(productData, { transaction });
+
+      // ASSOCIAÇÃO COM CATEGORIAS
+      if (parsedCategoryIds.length > 0) {
+        const categories = await Category.findAll({
+          where: { id: parsedCategoryIds },
+          transaction,
+        });
+        await product.setCategories(categories, { transaction });
+      }
+
+      // CRIAÇÃO DE IMAGENS
       if (images && images.length > 0) {
         const imagensValidas = images.map((file) => ({
           path: `/uploads/${file.filename}`,
           enabled: true,
-          ProductId: product.id,
+          product_id: product.id,
         }));
-
-        await images.bulkCreate(imagensValidas, { transaction });
+        await Image.bulkCreate(imagensValidas, { transaction });
       }
 
-      // Criando opções
+      // CRIAÇÃO DE OPÇÕES
       if (Array.isArray(options) && options.length > 0) {
-        const opcoesValidas = options.map((opt) => ({
-          ...opt,
-          ProductId: product.id,
-        }));
+        const invalidOptions = options.filter(
+          (opt) =>
+            !opt.title ||
+            !opt.type ||
+            !opt.values ||
+            (Array.isArray(opt.values) && opt.values.length === 0)
+        );
+
+        if (invalidOptions.length > 0) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error:
+              "Opções inválidas. Cada opção deve ter title, type e values não vazios.",
+          });
+        }
+
+        const opcoesValidas = options.map((opt) => {
+          let valoresArray = [];
+
+          if (Array.isArray(opt.values)) {
+            valoresArray = opt.values;
+          } else if (typeof opt.values === "string") {
+            try {
+              const parsed = JSON.parse(opt.values);
+              valoresArray = Array.isArray(parsed) ? parsed : [opt.values];
+            } catch {
+              valoresArray = [opt.values];
+            }
+          }
+
+          return {
+            title: opt.title,
+            shape: opt.shape || "square",
+            radius: opt.radius || "4px",
+            type: opt.type,
+            values: valoresArray,
+            product_id: product.id,
+          };
+        });
 
         await Option.bulkCreate(opcoesValidas, { transaction });
       }
 
       await transaction.commit();
+
       return res.status(201).json({
         message: "Produto cadastrado com sucesso!",
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
+        product: {
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+        },
       });
     } catch (error) {
       await transaction.rollback();
-      console.error("Erro ao salvar produto:", error);
-      return res.status(500).json({ error: error.message });
+
+      if (error.name === "SequelizeValidationError") {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors.map((err) => ({
+            field: err.path,
+            message: err.message,
+          })),
+        });
+      }
+
+      if (error.name === "SequelizeUniqueConstraintError") {
+        return res.status(400).json({
+          error: "Violação de restrição única",
+          field: error.errors[0]?.path || "unknown",
+        });
+      }
+
+      console.error("Erro no ProductController.store:", error);
+      return res
+        .status(500)
+        .json({ error: "Erro interno do servidor", message: error.message });
     }
   },
-  // Busca produtos
+
+  // procurar um produto
   async search(req, res) {
     try {
       const {
@@ -331,7 +513,6 @@ module.exports = {
         .json({ error: error.message, message: "Erro ao buscar produto" });
     }
   },
-
   // atualizar um produto
   async update(req, res) {
     const { id } = req.params;
@@ -364,9 +545,36 @@ module.exports = {
         options: rawOptions,
       } = value;
 
+      // Verifica se o produto existe antes de tentar atualizar
+      const existingProduct = await Product.findByPk(productId, {
+        transaction,
+      });
+      if (!existingProduct) {
+        await transaction.rollback();
+        return res.status(404).json({ error: "Produto não encontrado" });
+      }
+
+      // ✅ VALIDAÇÃO DE NOME ÚNICO PARA ATUALIZAÇÃO
+      if (name && name.trim() !== existingProduct.name) {
+        const existingProductWithName = await Product.findOne({
+          where: {
+            name: name.trim(),
+            id: { [Op.ne]: productId },
+          },
+          transaction,
+        });
+
+        if (existingProductWithName) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: "Já existe outro produto com este nome",
+          });
+        }
+      }
+
       const updatedFields = {
         ...(enabled !== undefined && { enabled }),
-        ...(name && { name }),
+        ...(name && { name: name.trim() }),
         ...(slug && { slug }),
         ...(stock !== undefined && { stock }),
         ...(description && { description }),
@@ -374,43 +582,63 @@ module.exports = {
         ...(price_with_discount !== undefined && { price_with_discount }),
       };
 
-      // Parse das opções
       let options = [];
       if (rawOptions) {
-        if (typeof rawOptions === "string") {
-          options = JSON.parse(rawOptions);
-        } else {
-          options = rawOptions;
+        try {
+          if (typeof rawOptions === "string") {
+            options = JSON.parse(rawOptions);
+          } else if (Array.isArray(rawOptions)) {
+            options = rawOptions;
+          } else {
+            options = [rawOptions];
+          }
+        } catch (parseError) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: "Formato inválido para as opções do produto",
+          });
         }
       }
 
-      const images = req.files;
-
-      const [updated] = await Product.update(updatedFields, {
-        where: { id: productId },
-        transaction,
-      });
-
-      if (!updated) {
-        await transaction.rollback();
-        return res.status(404).json({ error: "Produto não encontrado" });
-      }
-
-      const product = await Product.findByPk(productId, { transaction });
-
       // Atualiza categorias
-      if (category_ids && category_ids.length > 0) {
+      if (
+        category_ids &&
+        Array.isArray(category_ids) &&
+        category_ids.length > 0
+      ) {
         const categories = await Category.findAll({
           where: { id: category_ids },
           transaction,
         });
-        await product.setCategories(categories, { transaction });
+        if (categories.length !== category_ids.length) {
+          await transaction.rollback();
+          const foundIds = categories.map((cat) => cat.id);
+          const missingIds = category_ids.filter(
+            (id) => !foundIds.includes(id)
+          );
+          return res.status(400).json({
+            error: "Uma ou mais categorias não foram encontradas",
+            details: {
+              requested: category_ids,
+              found: foundIds,
+              missing: missingIds,
+            },
+          });
+        }
+
+        await existingProduct.setCategories(categories, { transaction });
       }
 
+      // Atualiza o produto
+      await Product.update(updatedFields, {
+        where: { id: productId },
+        transaction,
+      });
+
       // Atualiza imagens
+      const images = req.files;
       if (images && images.length > 0) {
         await Image.destroy({ where: { ProductId: productId }, transaction });
-
         const novasImagens = images.map((file) => ({
           path: `/uploads/${file.filename}`,
           enabled: true,
@@ -418,24 +646,33 @@ module.exports = {
         }));
         await Image.bulkCreate(novasImagens, { transaction });
       }
-
       // Atualiza opções
       if (Array.isArray(options) && options.length > 0) {
         await Option.destroy({ where: { ProductId: productId }, transaction });
-
-        const novasOpcoes = options.map((opt) => ({
-          ...opt,
-          ProductId: productId,
-          values:
-            typeof opt.values === "string"
+        const novasOpcoes = options.map((opt) => {
+          if (!opt.title || !opt.type) {
+            throw new Error(`Opção inválida: title e type são obrigatórios`);
+          }
+          return {
+            title: opt.title,
+            shape: opt.shape || "square",
+            radius: opt.radius || 0,
+            type: opt.type,
+            values: Array.isArray(opt.values)
+              ? JSON.stringify(opt.values)
+              : typeof opt.values === "string"
               ? opt.values
-              : JSON.stringify(opt.values),
-        }));
+              : "[]",
+            ProductId: productId,
+          };
+        });
+
         await Option.bulkCreate(novasOpcoes, { transaction });
       }
 
       await transaction.commit();
 
+      // Busca o produto atualizado
       const updatedProduct = await Product.findByPk(productId, {
         include: [
           {
@@ -446,28 +683,32 @@ module.exports = {
           {
             model: Option,
             as: "options",
-            attributes: [
-              "id",
-              "title",
-              "shape",
-              "radius",
-              "type",
-              "values",
-              "product_id",
-            ],
+            attributes: ["id", "title", "shape", "radius", "type", "values"],
           },
           {
             model: Category,
             as: "Categories",
-            attributes: ["id"],
+            attributes: ["id", "name"],
             through: { attributes: [] },
           },
         ],
       });
 
       const productJson = updatedProduct.toJSON();
-      const categoryIds = productJson.Categories?.map((cat) => cat.id) || [];
 
+      // Processa as opções
+      if (productJson.options) {
+        productJson.options = productJson.options.map((option) => ({
+          ...option,
+          values:
+            typeof option.values === "string"
+              ? JSON.parse(option.values)
+              : option.values,
+        }));
+      }
+
+      // Processa category_ids
+      const categoryIds = productJson.Categories?.map((cat) => cat.id) || [];
       delete productJson.Categories;
       productJson.category_ids = categoryIds;
 
@@ -478,12 +719,15 @@ module.exports = {
     } catch (err) {
       await transaction.rollback();
       console.error("Erro ao atualizar produto:", err);
-      return res
-        .status(500)
-        .json({ error: "Erro interno ao atualizar produto" });
+      console.error("Stack trace:", err.stack);
+      console.error("Request body:", req.body);
+
+      return res.status(500).json({
+        error: "Erro interno ao atualizar produto",
+        ...(process.env.NODE_ENV === "development" && { details: err.message }),
+      });
     }
   },
-
   // deletar um produto
   async delete(req, res) {
     const { id } = req.params;

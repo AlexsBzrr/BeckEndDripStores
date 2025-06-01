@@ -268,3 +268,143 @@
  *                   type: string
  *                   example: "Usuário nao encontrado"
  */
+
+/**
+ * @swagger
+ * /v1/product:
+ *   post:
+ *     tags:
+ *       - Products
+ *     summary: Cria um novo produto
+ *     description: Cria um novo produto com imagens, opções e categorias
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json: # Mudamos para application/json se você vai enviar base64 no corpo
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - price # Adicionando price como obrigatório, ajuste se não for
+ *               - category_ids # Adicionando category_ids como obrigatório, ajuste se não for
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *                 default: true
+ *                 example: true
+ *               name:
+ *                 type: string
+ *                 example: "Calça Pantalona"
+ *                 description: "Nome do produto (obrigatório)"
+ *               slug:
+ *                 type: string
+ *                 example: "Calça-Pantalona"
+ *                 description: "Slug único (gerado automaticamente se não fornecido)"
+ *               stock:
+ *                 type: integer
+ *                 default: 0
+ *                 example: 10
+ *               description:
+ *                 type: string
+ *                 default: ""
+ *                 example: "Descrição da Calça Jeans"
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 default: 0
+ *                 example: 99.90
+ *               price_with_discount:
+ *                 type: number
+ *                 format: float
+ *                 example: 199.90 # No seu exemplo, o preço com desconto é maior, verifique isso
+ *                 description: "Preço com desconto (opcional)"
+ *               category_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [3, 10]
+ *                 description: "IDs das categorias associadas"
+ *               images: # Alterado de 'files' para 'images'
+ *                 type: array
+ *                 description: "Array de objetos de imagem, cada um com path e conteúdo base64"
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     path:
+ *                       type: string
+ *                       description: "Caminho ou nome do arquivo da imagem"
+ *                       example: "/images/produto-01-img1.png"
+ *                     content:
+ *                       type: string
+ *                       format: byte # Indica que é um conteúdo binário, geralmente base64
+ *                       description: "Conteúdo da imagem em formato base64 (com prefixo data URI opcional)"
+ *                       example: "data:image/jpg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD..."
+ *               options: # Estrutura de 'options' alterada
+ *                 type: array
+ *                 description: "Array de objetos de opção do produto"
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                       example: "Cor"
+ *                     shape:
+ *                       type: string
+ *                       example: "square"
+ *                     radius: # Note que 'radius' no seu exemplo é um número
+ *                       type: integer # ou number, se puder ter decimais
+ *                       example: 4
+ *                     type:
+ *                       type: string
+ *                       example: "text"
+ *                     values:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["P", "M", "G"]
+ *             example: # Exemplo principal que aparecerá no Swagger UI
+ *               enabled: true
+ *               name: "Calça Pantalona"
+ *               slug: "Calça-Pantalona"
+ *               stock: 10
+ *               description: "Descrição da Calça Jeans"
+ *               price: 99.90
+ *               price_with_discount: 199.90 # Verifique este valor, no seu exemplo está maior que o preço normal
+ *               category_ids: [3, 10]
+ *               images:
+ *                 - path: "/images/produto-01-img1.png"
+ *                   content: "data:image/jpg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD..."
+ *               options:
+ *                 - title: "Cor"
+ *                   shape: "square"
+ *                   radius: 4
+ *                   type: "text"
+ *                   values: ["P", "M", "G"]
+ *                 - title: "Tamanho"
+ *                   shape: "circle"
+ *                   type: "color"
+ *                   values: ["#000"]
+ *     responses:
+ *       201:
+ *         description: Produto criado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Produto cadastrado com sucesso!"
+ *                 id:
+ *                   type: integer
+ *                   example: 42
+ *                 # ... (outras propriedades da resposta que você retorna)
+ *       400:
+ *         description: Dados inválidos
+ *         # ... (schema da resposta de erro)
+ *       500:
+ *         description: Erro interno do servidor
+ *         # ... (schema da resposta de erro)
+ */

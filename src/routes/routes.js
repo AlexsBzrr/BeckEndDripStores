@@ -39,12 +39,7 @@ router.delete("/category/:id", authMiddleware, CategoryController.delete);
 // Rotas para produtos
 router.get("/product/search", ProductController.search);
 router.get("/product/:id", ProductController.show);
-router.post(
-  "/product",
-  authMiddleware,
-  upload.array("images"),
-  ProductController.store
-);
+router.post("/product", authMiddleware, upload, ProductController.store);
 router.put("/product/:id", authMiddleware, ProductController.update);
 router.delete("/product/:id", authMiddleware, ProductController.delete);
 

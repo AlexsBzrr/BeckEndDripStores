@@ -1,5 +1,3 @@
-// Documentação da API
-
 /**
  * @swagger
  * tags:
@@ -20,7 +18,7 @@
  *     requestBody:
  *       required: true
  *       content:
- *          application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -30,6 +28,7 @@
  *                 type: boolean
  *                 default: true
  *                 example: true
+ *                 description: "Se o produto está habilitado"
  *               name:
  *                 type: string
  *                 example: "Produto Exemplo"
@@ -42,15 +41,18 @@
  *                 type: integer
  *                 default: 0
  *                 example: 10
+ *                 description: "Quantidade em estoque"
  *               description:
  *                 type: string
  *                 default: ""
  *                 example: "Descrição detalhada do produto"
+ *                 description: "Descrição do produto"
  *               price:
  *                 type: number
  *                 format: float
  *                 default: 0
  *                 example: 119.90
+ *                 description: "Preço do produto"
  *               price_with_discount:
  *                 type: number
  *                 format: float
@@ -61,7 +63,7 @@
  *                 items:
  *                   type: integer
  *                 example: [1, 15, 24]
- *                 description: "IDs das categorias associadas"
+ *                 description: "IDs das categorias associadas (enviar como array ou string JSON)"
  *               files:
  *                 type: array
  *                 items:
@@ -70,15 +72,14 @@
  *                 description: "Arquivos de imagem do produto"
  *               options:
  *                 type: string
- *                 example:
- *                   '[{
- *                   "title":"Tamanho",
- *                   "shape":"square",
- *                   "radius":"4px",
- *                   "type":"text",
- *                   "values":["P","M","G"]
- *                  }]'
- *                 description: "JSON string ou array com opções do produto"
+ *                 example: '[{"title":"Tamanho","shape":"square","radius":4,"type":"text","values":["P","M","G"]}]'
+ *                 description: "JSON string com opções do produto (cores, tamanhos, etc.)"
+ *           encoding:
+ *             files:
+ *               contentType: image/*
+ *               category_ids:
+ *               style: form
+ *               explode: true
  *     responses:
  *       201:
  *         description: Produto criado com sucesso
@@ -108,7 +109,23 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Name is required"
+ *                   examples:
+ *                     name_required:
+ *                       value: "Name is required"
+ *                       summary: "Nome é obrigatório"
+ *                     name_exists:
+ *                       value: "Já existe um produto com este nome"
+ *                       summary: "Nome já existe"
+ *       401:
+ *         description: Não autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Token inválido"
  *       500:
  *         description: Erro interno do servidor
  *         content:
@@ -152,7 +169,7 @@
  *         name: match
  *         schema:
  *           type: string
- *         example: "bermuda"
+ *         example: ""
  *         description: "Busca por texto no nome ou descrição"
  *       - in: query
  *         name: category_ids
@@ -353,13 +370,16 @@
  */
 
 /**
+/**
  * @swagger
  * /v1/product/{id}:
  *   put:
  *     tags:
  *       - Products
  *     summary: Atualiza um produto existente
- *     description: Atualiza dados do produto, incluindo imagens, opções e categorias
+ *     description: |
+ *       Atualiza dados de um produto.
+ *       
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -367,131 +387,174 @@
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: ID do produto
+ *           type: integer # Ou string, se seu ID for string
+ *         description: ID do produto a ser atualizado
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
  *             type: object
+ *             # Nenhum campo é explicitamente 'required' aqui, pois PUT pode ser usado para atualizações parciais.
+ *             # Se algum campo for sempre necessário mesmo na atualização, adicione-o ao 'required' array.
  *             properties:
- *               enabled:
- *                 type: boolean
- *                 example: true
- *               name:
+ *               name: # Mantido, pois está no seu exemplo
  *                 type: string
- *                 example: "Produto Atualizado"
- *               slug:
+ *                 example: "Bermuda Jeans Modelo - 05/2025"
+ *               description: # Mantido
  *                 type: string
- *                 example: "produto-atualizado"
- *               stock:
- *                 type: integer
- *                 example: 5
- *               description:
- *                 type: string
- *                 example: "Nova descrição do produto"
- *               price:
+ *                 example: "Descricao da Bermuda Jeans Modelo - 2025"
+ *               price: # Mantido
  *                 type: number
  *                 format: float
- *                 example: 129.90
- *               price_with_discount:
- *                 type: number
- *                 format: float
- *                 example: 109.90
- *               category_ids:
+ *                 example: 350.90
+ *               # Campos como enabled, slug, stock, price_with_discount foram removidos
+ *               # do schema principal do requestBody para refletir seu exemplo.
+ *               # Se eles PUDEREM ser enviados, eles devem ser adicionados aqui como opcionais.
+ *               category_ids: # Mantido
  *                 type: array
  *                 items:
  *                   type: integer
- *                 example: [1, 3, 5]
- *               files:
+ *                 example: [10, 7]
+ *                 description: "IDs das categorias associadas (substituem as existentes)"
+ *               images: # Mantido
  *                 type: array
+ *                 description: "Array de objetos de imagem. Substituem as existentes. Envie array vazio para remover todas."
  *                 items:
- *                   type: string
- *                   format: binary
- *                 description: "Novas imagens (substituem as existentes)"
+ *                   type: object
+ *                   properties:
+ *                     path:
+ *                       type: string
+ *                       example: "/images/nova-imagem.png"
+ *                     content:
+ *                       type: string
+ *                       format: byte
+ *                       example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
+ *                 example: [] # Exemplo de como remover todas as imagens
+ *               options: # Mantido
+ *                 type: array
+ *                 description: "Array de objetos de opção. Substituem as existentes. Envie array vazio para remover todas."
+ *                 items:
+ *                   type: object
+ *                   properties:
+
+ *                     title:
+ *                       type: string
+ *                       example: "Cor"
+ *                     shape:
+ *                       type: string
+ *                       example: "square"
+ *                     radius:
+ *                       type: integer
+ *                       example: 5
+ *                     type:
+ *                       type: string
+ *                       example: "text"
+ *                     values:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["P", "M", "G"]
+ *             example: # Exemplo principal que aparecerá no Swagger UI
+ * 
+ *               enabled: true
+ *               name: "Bermuda Jeans Modelo - 05/2025"
+ *               description: "Descricao da Bermuda Jeans Modelo - 2025"
+ *               price: 350.90
+ *               images: [] # Exemplo com imagens vazias
  *               options:
- *                 type: string
- *                 example: '[{"title":"Cor","type":"text","values":["Azul","Verde"]}]'
- *                 description: "Novas opções (substituem as existentes)"
+ *                 - title: "Cor"
+ *                   shape: "square"
+ *                   radius: 5
+ *                   type: "text"
+ *                   values: ["P", "M", "G"]
+ *               category_ids: [10, 7]
  *     responses:
  *       200:
  *         description: Produto atualizado com sucesso
  *         content:
  *           application/json:
  *             schema:
+ *               # A resposta DEVE refletir o estado completo e ATUALIZADO do recurso
+ *               # Mesmo que o request tenha sido parcial.
  *               type: object
  *               properties:
- *                 message:
+ *                 id: # ID do produto
+ *                   type: integer # Ou string
+ *                   example: 3
+ *                 enabled: # Assumindo que este campo ainda existe no modelo do produto
+ *                   type: boolean
+ *                   example: true
+ *                 name:
  *                   type: string
- *                   example: "Produto atualizado com sucesso"
- *                 product:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 1
- *                     enabled:
- *                       type: boolean
- *                       example: true
- *                     name:
- *                       type: string
- *                       example: "Produto Atualizado"
- *                     slug:
- *                       type: string
- *                       example: "produto-atualizado"
- *                     stock:
- *                       type: integer
- *                       example: 5
- *                     description:
- *                       type: string
- *                       example: "Nova descrição do produto"
- *                     price:
- *                       type: number
- *                       example: 129.90
- *                     price_with_discount:
- *                       type: number
- *                       example: 109.90
- *                     category_ids:
- *                       type: array
- *                       items:
- *                         type: integer
- *                       example: [1, 3, 5]
- *                     images:
- *                       type: array
- *                       items:
- *                         type: object
- *                     options:
- *                       type: array
- *                       items:
- *                         type: object
- *       400:
- *         description: Dados inválidos
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
+ *                   example: "Bermuda Jeans Modelo - 05/2025"
+ *                 slug: # Assumindo que este campo ainda existe
  *                   type: string
- *                   example: "Dados inválidos"
- *                 details:
+ *                   example: "bermuda-jeans-modelo-05-2025"
+ *                 stock: # Assumindo que este campo ainda existe
+ *                   type: integer
+ *                   example: 15 # Valor atual no banco
+ *                 description:
+ *                   type: string
+ *                   example: "Descricao da Bermuda Jeans Modelo - 2025"
+ *                 price:
+ *                   type: number
+ *                   example: 350.90
+ *                 price_with_discount: # Assumindo que este campo ainda existe
+ *                   type: number
+ *                   example: 330.00 # Valor atual no banco
+ *                 category_ids:
  *                   type: array
  *                   items:
- *                     type: string
- *                   example: ["name must be a string"]
+ *                     type: integer
+ *                   example: [10, 7]
+ *                 images:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       path:
+ *                         type: string
+ *                   example: [] # Se foram removidas no PUT
+ *                 options:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 101 # Novo ID da opção se foi recriada
+ *                       title:
+ *                         type: string
+ *                         example: "Cor"
+ *                       shape:
+ *                         type: string
+ *                         example: "square"
+ *                       radius:
+ *                         type: integer
+ *                         example: 5
+ *                       type:
+ *                         type: string
+ *                         example: "text"
+ *                       values:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["P", "M", "G"]
+ *                       product_id:
+ *                         type: integer
+ *                         example: 3
+ *       400:
+ *         description: Dados inválidos
+ *         # ... (schema da resposta de erro)
  *       404:
  *         description: Produto não encontrado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Produto não encontrado"
+ *         # ... (schema da resposta de erro)
  *       500:
  *         description: Erro interno do servidor
+ *         # ... (schema da resposta de erro)
  */
 
 /**

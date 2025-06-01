@@ -3,12 +3,10 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const authConfig = require("../config/auth");
 
-function generateToken(payload, expiresIn = "1h") {
+function generateToken(payload, expiresIn = "8h") {
   const token = jwt.sign(payload, authConfig.secret, { expiresIn });
   try {
     const decoded = jwt.verify(token, authConfig.secret);
-    console.log("Token gerado:", token);
-    console.log("Decoded payload:", decoded);
   } catch (error) {
     console.error("Erro ao verificar token criado:", error);
   }
@@ -87,3 +85,5 @@ module.exports = {
     }
   },
 };
+
+// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywiZmlyc3RuYW1lIjoiTHVjYXMiLCJzdXJuYW1lIjoiQWxlZiIsImVtYWlsIjoibHVjYXNhbGVmQGVtYWlsLmNvbS5iciIsImlhdCI6MTc0ODczMTkzMCwiZXhwIjoxNzQ4NzYwNzMwfQ.BsWwqdqM2qIJ8oDir79GKYlFRAHeAin0lDxc3Bnhzz0

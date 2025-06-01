@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Cliente = require("../models/cliente");
 
-function generateToken(payload, expiresIn = "1h") {
+function generateToken(payload, expiresIn = "8h") {
   const secret = process.env.JWT_SECRET;
   const token = jwt.sign(payload, secret, { expiresIn });
   try {

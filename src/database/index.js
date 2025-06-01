@@ -28,4 +28,6 @@ if (Category.associate) Category.associate(connection.models);
 if (Image.associate) Image.associate(connection.models);
 if (Option.associate) Option.associate(connection.models);
 
-module.exports = connection;
+module.exports = {
+  sequelize: connection,
+};

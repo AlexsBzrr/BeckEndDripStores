@@ -1,7 +1,7 @@
 const Joi = require("joi");
+const { Op } = require("sequelize");
 
 const updateProductSchema = Joi.object({
-  id: Joi.number().integer().required(),
   enabled: Joi.boolean().optional(),
   name: Joi.string().optional(),
   slug: Joi.string().optional(),
