@@ -370,7 +370,6 @@
  */
 
 /**
-/**
  * @swagger
  * /v1/product/{id}:
  *   put:
@@ -379,7 +378,7 @@
  *     summary: Atualiza um produto existente
  *     description: |
  *       Atualiza dados de um produto.
- *       
+ *
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -400,14 +399,14 @@
  *             properties:
  *               name: # Mantido, pois está no seu exemplo
  *                 type: string
- *                 example: "Bermuda Jeans Modelo - 05/2025"
+ *                 example: "Vestido Jeans Modelo - 10/2024"
  *               description: # Mantido
  *                 type: string
- *                 example: "Descricao da Bermuda Jeans Modelo - 2025"
+ *                 example: "Descrição da Bermuda Jeans Modelo - 2025"
  *               price: # Mantido
  *                 type: number
  *                 format: float
- *                 example: 350.90
+ *                 example: 350.9
  *               # Campos como enabled, slug, stock, price_with_discount foram removidos
  *               # do schema principal do requestBody para refletir seu exemplo.
  *               # Se eles PUDEREM ser enviados, eles devem ser adicionados aqui como opcionais.
@@ -415,7 +414,7 @@
  *                 type: array
  *                 items:
  *                   type: integer
- *                 example: [10, 7]
+ *                 example: [3]
  *                 description: "IDs das categorias associadas (substituem as existentes)"
  *               images: # Mantido
  *                 type: array
@@ -437,7 +436,9 @@
  *                 items:
  *                   type: object
  *                   properties:
-
+ *                     id:
+ *                       type: integer
+ *                       example: 1
  *                     title:
  *                       type: string
  *                       example: "Cor"
@@ -451,24 +452,25 @@
  *                       type: string
  *                       example: "text"
  *                     values:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ["P", "M", "G"]
+ *                       type: string
+ *                       example: "[\"P\",\"M\",\"G\"]"
+ *                     product_id:
+ *                       type: integer
+ *                       example: 1
  *             example: # Exemplo principal que aparecerá no Swagger UI
- * 
- *               enabled: true
- *               name: "Bermuda Jeans Modelo - 05/2025"
- *               description: "Descricao da Bermuda Jeans Modelo - 2025"
- *               price: 350.90
- *               images: [] # Exemplo com imagens vazias
+ *               name: "Vestido Jeans Modelo - 10/2024"
+ *               description: "Descrição da Bermuda Jeans Modelo - 2025"
+ *               price: 350.9
+ *               images: []
  *               options:
- *                 - title: "Cor"
+ *                 - id: 1
+ *                   title: "Cor"
  *                   shape: "square"
  *                   radius: 5
  *                   type: "text"
- *                   values: ["P", "M", "G"]
- *               category_ids: [10, 7]
+ *                   values: "[\"P\",\"M\",\"G\"]"
+ *                   product_id: 1
+ *               category_ids: [3]
  *     responses:
  *       200:
  *         description: Produto atualizado com sucesso
@@ -487,27 +489,27 @@
  *                   example: true
  *                 name:
  *                   type: string
- *                   example: "Bermuda Jeans Modelo - 05/2025"
+ *                   example: "Calça Jeans - 10/2025"
  *                 slug: # Assumindo que este campo ainda existe
  *                   type: string
- *                   example: "bermuda-jeans-modelo-05-2025"
+ *                   example: "calca-jeans-10-2025"
  *                 stock: # Assumindo que este campo ainda existe
  *                   type: integer
  *                   example: 15 # Valor atual no banco
  *                 description:
  *                   type: string
- *                   example: "Descricao da Bermuda Jeans Modelo - 2025"
+ *                   example: "Descrição da Bermuda Jeans Modelo - 2025"
  *                 price:
  *                   type: number
- *                   example: 350.90
+ *                   example: 189.99
  *                 price_with_discount: # Assumindo que este campo ainda existe
  *                   type: number
- *                   example: 330.00 # Valor atual no banco
+ *                   example: 120.00 # Valor atual no banco
  *                 category_ids:
  *                   type: array
  *                   items:
  *                     type: integer
- *                   example: [10, 7]
+ *                   example: [3]
  *                 images:
  *                   type: array
  *                   items:
@@ -525,7 +527,7 @@
  *                     properties:
  *                       id:
  *                         type: integer
- *                         example: 101 # Novo ID da opção se foi recriada
+ *                         example: 1
  *                       title:
  *                         type: string
  *                         example: "Cor"
@@ -539,13 +541,11 @@
  *                         type: string
  *                         example: "text"
  *                       values:
- *                         type: array
- *                         items:
- *                           type: string
- *                         example: ["P", "M", "G"]
+ *                         type: string
+ *                         example: "[\"P\",\"M\",\"G\"]"
  *                       product_id:
  *                         type: integer
- *                         example: 3
+ *                         example: 1
  *       400:
  *         description: Dados inválidos
  *         # ... (schema da resposta de erro)
