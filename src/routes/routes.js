@@ -1,10 +1,10 @@
 const express = require("express");
-const UserController = require("../controllers/UserContrlller");
-const CategoryController = require("../controllers/CategoriesController");
-const LoginController = require("../controllers/LoginController");
+const UserController = require("../controllers/UserControllers.js");
+const CategoryController = require("../controllers/CategoriesControllers");
+const LoginController = require("../controllers/LoginControllers");
 const ClienteController = require("../controllers/ClienteControllers");
-const ProductController = require("../controllers/ProdutctController");
-const LoginClienteControllers = require("../controllers/LoginClienteControllers");
+const ProductController = require("../controllers/ProductControllers");
+const LoginClienteController = require("../controllers/LoginClienteControllers");
 const authMiddleware = require("../middlewares/auth");
 const upload = require("../middlewares/upload");
 
@@ -13,7 +13,7 @@ const router = express.Router();
 router.post("/login", LoginController.login);
 
 // Rotas para login Clientes
-router.post("/loginCliente", LoginClienteControllers.login);
+router.post("/loginCliente", LoginClienteController.login);
 
 // Rotas para Usuarios
 router.get("/user", UserController.index);

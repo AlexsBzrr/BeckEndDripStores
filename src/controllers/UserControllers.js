@@ -1,5 +1,5 @@
 const UserService = require("../services/UserService");
-const { generateToken } = require("./LoginController");
+const { generateToken } = require("./LoginControllers");
 const userSchema = require("../validations/userValidation");
 
 //exibição de usuários

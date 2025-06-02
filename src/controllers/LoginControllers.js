@@ -85,5 +85,3 @@ module.exports = {
     }
   },
 };
-
-// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywiZmlyc3RuYW1lIjoiTHVjYXMiLCJzdXJuYW1lIjoiQWxlZiIsImVtYWlsIjoibHVjYXNhbGVmQGVtYWlsLmNvbS5iciIsImlhdCI6MTc0ODczMTkzMCwiZXhwIjoxNzQ4NzYwNzMwfQ.BsWwqdqM2qIJ8oDir79GKYlFRAHeAin0lDxc3Bnhzz0
