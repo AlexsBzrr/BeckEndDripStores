@@ -24,8 +24,8 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use("/uploads", express.static(path.resolve(__dirname, "..", "uploads")));
 app.use(express.json());
