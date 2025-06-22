@@ -25,9 +25,9 @@ router.delete("/user/:id", authMiddleware, UserController.delete);
 // Rotas para clientes
 router.get("/clientes", ClienteController.index);
 router.get("/clientes/:id", ClienteController.show);
-router.post("/clientes", authMiddleware, ClienteController.store);
-router.put("/clientes/:id", authMiddleware, ClienteController.update);
-router.delete("/clientes/:id", authMiddleware, ClienteController.delete);
+router.post("/clientes", ClienteController.store);
+router.put("/clientes/:id", ClienteController.update);
+router.delete("/clientes/:id", ClienteController.delete);
 
 //Rotas para Categorias
 router.get("/category/search", CategoryController.search);
