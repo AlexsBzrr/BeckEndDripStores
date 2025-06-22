@@ -47,7 +47,6 @@ module.exports = {
             where: { id: cliente.id },
             attributes: ["id", "nome", "email"],
           });
-
           if (!updatedClient) {
             await updatedClient.save();
             await updatedClient.reload();
