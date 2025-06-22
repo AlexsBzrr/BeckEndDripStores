@@ -3,7 +3,6 @@ const { Model, DataTypes } = require("sequelize");
 module.exports = (sequelize) => {
   class ProductCategory extends Model {
     static associate(models) {
-      // Define as associações para os modelos Product e Category
       ProductCategory.belongsTo(models.Product, { foreignKey: "product_id" });
       ProductCategory.belongsTo(models.Category, { foreignKey: "category_id" });
     }
@@ -35,7 +34,7 @@ module.exports = (sequelize) => {
     {
       sequelize,
       modelName: "ProductCategory",
-      tableName: "productCategory", // ou "product_category" se for o nome real da tabela
+      tableName: "productCategory",
       timestamps: false,
     }
   );

@@ -36,7 +36,6 @@ module.exports = {
     }
   },
 
-  //exibição de categorias pelo id
   async show(req, res) {
     const category = await CategoryService.findCategoryById(req.params.id);
     if (!category)
@@ -49,7 +48,6 @@ module.exports = {
     });
   },
 
-  //criação de categorias
   async store(req, res) {
     try {
       const { error, value } = categorySchema.validate(req.body, {
@@ -153,7 +151,6 @@ module.exports = {
     }
   },
 
-  //exclusão de categorias
   async delete(req, res) {
     try {
       const deletedCount = await CategoryService.deleteCategory(req.params.id);

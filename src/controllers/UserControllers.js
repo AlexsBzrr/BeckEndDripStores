@@ -86,7 +86,7 @@ module.exports = {
       });
     }
   },
-
+  //atualização de usuários
   async update(req, res) {
     const user = await UserService.updateUser(req.params.id, req.body);
     if (!user)

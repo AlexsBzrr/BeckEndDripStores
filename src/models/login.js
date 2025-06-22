@@ -27,9 +27,3 @@ module.exports = (sequelize, DataTypes) => {
 
   return Login;
 };
-
-/*
-
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywiZmlyc3RuYW1lIjoiTHVjYXMiLCJzdXJuYW1lIjoiQWxlZiIsImVtYWlsIjoibHVjYXNhbGVmQGVtYWlsLmNvbS5iciIsImlhdCI6MTc0ODc4ODM5NCwiZXhwIjoxNzQ4ODE3MTk0fQ.QIz43Y0ErpTtqgTczJ-1_m_zrlWVI6DE4ps8tYBjdPo
-
-*/

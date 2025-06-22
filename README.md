@@ -1,4 +1,4 @@
-# DripStores Backend
+<!-- # DripStores Backend
 
 Uma API REST completa para e-commerce desenvolvida com Node.js, Express e MySQL, focada em gestão de produtos, usuários e categorias para uma loja online.
 
@@ -263,4 +263,224 @@ Este projeto está sob a licença ISC. Veja o arquivo `LICENSE` para mais detalh
 
 ---
 
-⭐ Se este projeto te ajudou, não esqueça de dar uma estrela no repositório!
+-->
+
+# DripStores Backend
+
+Uma API REST robusta para e-commerce, construída com Node.js, Express e MySQL. A API gerencia produtos, usuários, clientes e categorias, com autenticação JWT e documentação via Swagger.
+
+## 📦 Versão
+
+`1.0.0`
+
+## 🚀 Tecnologias Utilizadas
+
+### Core
+
+- **Node.js** – Runtime JavaScript
+- **Express.js** – Framework web
+- **MySQL** – Banco de dados relacional
+- **Sequelize** – ORM para Node.js
+
+### Autenticação & Segurança
+
+- **JWT (jsonwebtoken)** – Autenticação com tokens
+- **bcrypt** – Hash de senhas
+- **cors** – Controle de acesso entre domínios (CORS)
+
+### Validação & Upload
+
+- **Joi** – Validação de dados
+- **Multer** – Upload de arquivos
+
+### Documentação
+
+- **Swagger (swagger-jsdoc & swagger-ui-express)** – Documentação interativa da API
+
+### Desenvolvimento
+
+- **nodemon** – Reinicialização automática do servidor
+- **dotenv** – Gerenciamento de variáveis de ambiente
+- **Sequelize CLI** – Migrations e seeders
+- **Jest** – Testes automatizados
+- **Supertest** – Testes HTTP
+- **module-alias** – Alias de importação personalizados
+
+## 📁 Estrutura do Projeto
+
+src/
+├── config/ # Configurações do banco
+├── controllers/ # Lógica das rotas
+├── database/ # Migrations e seeders
+│ ├── migrations/
+│ └── seeders/
+├── docs/ # Documentação Swagger
+├── middlewares/ # Middlewares personalizados
+├── models/ # Modelos Sequelize
+├── routes/ # Definição das rotas
+├── services/ # Regras de negócio
+├── uploads/ # Arquivos enviados
+└── validations/ # Schemas Joi
+
+bash
+
+## ⚙️ Instalação
+
+### Pré-requisitos
+
+- Node.js 14+
+- MySQL
+- Git
+
+### Passo a passo
+
+```bash
+# Clone o repositório
+git clone https://github.com/AlexsBzrr/BeckEndDripStores.git
+cd BeckEndDripStores
+
+# Instale as dependências
+npm install
+
+# Configure o ambiente
+cp .env.example .env
+Edite o .env com suas credenciais:
+
+env
+
+DB_HOST=localhost
+DB_USER=seu_usuario
+DB_PASS=sua_senha
+DB_NAME=dripstores
+JWT_SECRET=sua_chave_secreta
+PORT=3000
+Migrations e Seeders
+bash
+
+# Executar migrations
+npx sequelize-cli db:migrate
+
+# Popular com dados iniciais (opcional)
+npx sequelize-cli db:seed:all
+Rodar o servidor
+bash
+
+# Modo desenvolvimento
+npm start
+
+# Modo produção
+npm run prod
+📌 Scripts Disponíveis
+npm start – Inicia com nodemon
+
+npm run prod – Inicia com Node
+
+npm test – Executa testes com Jest
+
+npx sequelize-cli db:migrate – Executa migrations
+
+npx sequelize-cli db:seed:all – Executa seeders
+
+📚 Documentação da API
+Acesse a documentação completa via Swagger após iniciar o servidor:
+
+📄 http://localhost:3000/api-docs
+
+🔐 Autenticação
+Utilize JWT para acessar rotas protegidas:
+
+http
+
+Authorization: Bearer seu_token_jwt
+🔗 Rotas da API
+Autenticação
+POST /api/auth/login
+
+POST /api/auth/register
+
+POST /api/auth/clients/login
+
+POST /api/auth/clients/register
+
+Usuários
+GET /api/users
+
+GET /api/users/:id
+
+PUT /api/users/:id
+
+DELETE /api/users/:id
+
+Produtos
+GET /api/products
+
+GET /api/products/:id
+
+POST /api/products
+
+PUT /api/products/:id
+
+DELETE /api/products/:id
+
+Categorias
+GET /api/categories
+
+GET /api/categories/:id
+
+POST /api/categories
+
+PUT /api/categories/:id
+
+DELETE /api/categories/:id
+
+Clientes
+GET /api/clients
+
+GET /api/clients/:id
+
+PUT /api/clients/:id
+
+DELETE /api/clients/:id
+
+Upload
+POST /api/upload – Upload de imagem de produto
+
+🗃️ Banco de Dados
+Tabelas Principais
+users
+
+clients
+
+products
+
+categories
+
+product_categories
+
+images
+
+options
+
+Relacionamentos
+Produtos ↔ Categorias (N:N)
+
+Produtos → Imagens (1:N)
+
+Produtos → Opções (1:N)
+
+🧪 Testes
+O projeto está preparado com Jest e Supertest:
+
+bash
+
+npm test
+📄 Licença
+Este projeto está licenciado sob a ISC License. Veja o arquivo LICENSE para mais detalhes.
+
+📫 Contato
+
+- Repositório: (https://github.com/AlexsBzrr/BeckEndDripStores)
+- Issues: (https://github.com/AlexsBzrr/BeckEndDripStores/issues)
+
+
+```

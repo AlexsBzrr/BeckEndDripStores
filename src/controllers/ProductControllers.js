@@ -22,13 +22,11 @@ module.exports = {
         category_ids,
       } = req.body;
 
-      // === VALIDAÇÕES INICIAIS ===
       if (!name || name.trim() === "") {
         await transaction.rollback();
         return res.status(400).json({ error: "Name is required" });
       }
 
-      // PARSE E VALIDAÇÃO DE OPTIONS
       let options = [];
       if (req.body.options) {
         try {
@@ -45,7 +43,6 @@ module.exports = {
         }
       }
 
-      // PARSE E VALIDAÇÃO DE CATEGORIAS
       let parsedCategoryIds = [];
       if (category_ids) {
         try {
@@ -74,7 +71,6 @@ module.exports = {
         }
       }
 
-      // VALIDAÇÃO DE PREÇOS
       const parsedPrice = parseFloat(price) || 0;
       const parsedPriceWithDiscount = price_with_discount
         ? parseFloat(price_with_discount)
@@ -102,14 +98,12 @@ module.exports = {
         });
       }
 
-      // VALIDAÇÃO DE ESTOQUE
       const parsedStock = parseInt(stock) || 0;
       if (parsedStock < 0) {
         await transaction.rollback();
         return res.status(400).json({ error: "Stock cannot be negative" });
       }
 
-      // VALIDAÇÃO DE NOME ÚNICO
       const existingProductWithName = await Product.findOne({
         where: { name: name.trim() },
         transaction,
@@ -122,7 +116,6 @@ module.exports = {
           .json({ error: "Já existe um produto com este nome" });
       }
 
-      // GERAÇÃO E VALIDAÇÃO DE SLUG
       let finalSlug = slug;
       if (!finalSlug) {
         finalSlug = name
@@ -153,7 +146,6 @@ module.exports = {
         }
       }
 
-      // VALIDAÇÃO DE IMAGENS (req.files) - Máximo 10
       const images = req.files;
       if (images && images.length > 10) {
         await transaction.rollback();
@@ -162,7 +154,6 @@ module.exports = {
           .json({ error: "Máximo de 10 imagens permitidas por produto" });
       }
 
-      // VALIDAÇÃO DE CATEGORIAS EXISTENTES
       if (parsedCategoryIds.length > 0) {
         const existingCategories = await Category.findAll({
           where: { id: parsedCategoryIds },
@@ -181,7 +172,6 @@ module.exports = {
         }
       }
 
-      // CRIAR PRODUTO
       const productData = {
         enabled: enabled !== undefined ? Boolean(enabled) : true,
         name: name.trim(),
@@ -194,7 +184,6 @@ module.exports = {
 
       const product = await Product.create(productData, { transaction });
 
-      // ASSOCIAÇÃO COM CATEGORIAS - CORRIGIDO
       if (parsedCategoryIds.length > 0) {
         const categories = await Category.findAll({
           where: { id: parsedCategoryIds },
@@ -203,17 +192,15 @@ module.exports = {
         await product.setCategories(categories, { transaction });
       }
 
-      // CRIAÇÃO DE IMAGENS - CORRIGIDO nome da coluna
       if (images && images.length > 0) {
         const imagensValidas = images.map((file) => ({
           path: `/uploads/${file.filename}`,
           enabled: true,
-          product_id: product.id, // Mudado de ProductId para product_id
+          product_id: product.id,
         }));
         await Image.bulkCreate(imagensValidas, { transaction });
       }
 
-      // CRIAÇÃO DE OPÇÕES - CORRIGIDO nome da coluna
       if (Array.isArray(options) && options.length > 0) {
         const invalidOptions = options.filter(
           (opt) =>
@@ -251,15 +238,13 @@ module.exports = {
             radius: opt.radius || "4px",
             type: opt.type,
             values: valoresArray,
-            product_id: product.id, // Mudado de ProductId para product_id
+            product_id: product.id,
           };
         });
 
         await Option.bulkCreate(opcoesValidas, { transaction });
       }
-
       await transaction.commit();
-
       return res.status(201).json({
         message: "Produto cadastrado com sucesso!",
         product: {
@@ -294,7 +279,6 @@ module.exports = {
         .json({ error: "Erro interno do servidor", message: error.message });
     }
   },
-  // procurar um produto
   async search(req, res) {
     try {
       const {
@@ -349,11 +333,10 @@ module.exports = {
         where.price = { [Op.between]: [min, max] };
       }
 
-      // CORRIGIDO: usar o alias correto da associação
       const categoryFilterForWhere = category_ids
         ? {
             model: Category,
-            as: "categories", // Mudado de "FilterCategories" para "categories"
+            as: "categories",
             attributes: [],
             where: {
               id: {
@@ -367,13 +350,12 @@ module.exports = {
 
       const categoryInclude = {
         model: Category,
-        as: "categories", // Mudado de "Categories" para "categories"
+        as: "categories",
         attributes: ["id"],
         through: { attributes: [] },
         required: false,
       };
 
-      // Filtro por opções (option[45]=PP,GG)
       const optionFilters = [];
       for (const key in optionsQuery) {
         const match = key.match(/^option\[(\d+)\]$/);
@@ -436,7 +418,6 @@ module.exports = {
       const mappedData = products.map((product) => {
         const productJson = product.toJSON();
 
-        // CORRIGIDO: usar o alias correto
         const categoryIds = productJson.categories
           ? productJson.categories.map((category) => category.id)
           : [];
@@ -486,7 +467,7 @@ module.exports = {
             ],
           },
           {
-            association: "categories", // Mudado de "Categories" para "categories"
+            association: "categories",
             attributes: ["id"],
             through: { attributes: [] },
           },
@@ -499,7 +480,6 @@ module.exports = {
 
       const productJson = product.toJSON();
 
-      // CORRIGIDO: usar o alias correto
       const categoryIds = productJson.categories
         ? productJson.categories.map((cat) => cat.id)
         : [];
@@ -515,13 +495,11 @@ module.exports = {
         .json({ error: error.message, message: "Erro ao buscar produto" });
     }
   },
-  // atualizar um produto - CORRIGIDO nome das colunas
   async update(req, res) {
     const { id } = req.params;
     const productId = Number(id);
     const transaction = await Product.sequelize.transaction();
 
-    // Validação com schema Joi
     const { error, value } = updateProductSchema.validate(req.body, {
       abortEarly: false,
     });
@@ -547,7 +525,6 @@ module.exports = {
         options: rawOptions,
       } = value;
 
-      // Verifica se o produto existe antes de tentar atualizar
       const existingProduct = await Product.findByPk(productId, {
         transaction,
       });
@@ -556,7 +533,6 @@ module.exports = {
         return res.status(404).json({ error: "Produto não encontrado" });
       }
 
-      // ✅ VALIDAÇÃO DE NOME ÚNICO PARA ATUALIZAÇÃO
       if (name && name.trim() !== existingProduct.name) {
         const existingProductWithName = await Product.findOne({
           where: {
@@ -602,7 +578,6 @@ module.exports = {
         }
       }
 
-      // Atualiza categorias
       if (
         category_ids &&
         Array.isArray(category_ids) &&
@@ -631,27 +606,24 @@ module.exports = {
         await existingProduct.setCategories(categories, { transaction });
       }
 
-      // Atualiza o produto
       await Product.update(updatedFields, {
         where: { id: productId },
         transaction,
       });
 
-      // Atualiza imagens - CORRIGIDO nome da coluna
       const images = req.files;
       if (images && images.length > 0) {
-        await Image.destroy({ where: { product_id: productId }, transaction }); // Mudado de ProductId para product_id
+        await Image.destroy({ where: { product_id: productId }, transaction });
         const novasImagens = images.map((file) => ({
           path: `/uploads/${file.filename}`,
           enabled: true,
-          product_id: productId, // Mudado de ProductId para product_id
+          product_id: productId,
         }));
         await Image.bulkCreate(novasImagens, { transaction });
       }
 
-      // Atualiza opções - CORRIGIDO nome da coluna
       if (Array.isArray(options) && options.length > 0) {
-        await Option.destroy({ where: { product_id: productId }, transaction }); // Mudado de ProductId para product_id
+        await Option.destroy({ where: { product_id: productId }, transaction });
         const novasOpcoes = options.map((opt) => {
           if (!opt.title || !opt.type) {
             throw new Error(`Opção inválida: title e type são obrigatórios`);
@@ -666,7 +638,7 @@ module.exports = {
               : typeof opt.values === "string"
               ? opt.values
               : "[]",
-            product_id: productId, // Mudado de ProductId para product_id
+            product_id: productId,
           };
         });
 
@@ -675,7 +647,6 @@ module.exports = {
 
       await transaction.commit();
 
-      // Busca o produto atualizado - CORRIGIDO alias
       const updatedProduct = await Product.findByPk(productId, {
         include: [
           {
@@ -690,7 +661,7 @@ module.exports = {
           },
           {
             model: Category,
-            as: "categories", // Mudado de "Categories" para "categories"
+            as: "categories",
             attributes: ["id", "name"],
             through: { attributes: [] },
           },
@@ -699,7 +670,6 @@ module.exports = {
 
       const productJson = updatedProduct.toJSON();
 
-      // Processa as opções
       if (productJson.options) {
         productJson.options = productJson.options.map((option) => ({
           ...option,
@@ -710,7 +680,6 @@ module.exports = {
         }));
       }
 
-      // Processa category_ids - CORRIGIDO alias
       const categoryIds = productJson.categories?.map((cat) => cat.id) || [];
       delete productJson.categories;
       productJson.category_ids = categoryIds;
@@ -736,7 +705,6 @@ module.exports = {
     const productId = Number(id);
     const transaction = await Product.sequelize.transaction();
 
-    // Validação com schema Joi
     const { error, value } = updateProductSchema.validate(req.body, {
       abortEarly: false,
     });
@@ -762,7 +730,6 @@ module.exports = {
         options: rawOptions,
       } = value;
 
-      // Verifica se o produto existe antes de tentar atualizar
       const existingProduct = await Product.findByPk(productId, {
         transaction,
       });
@@ -771,7 +738,6 @@ module.exports = {
         return res.status(404).json({ error: "Produto não encontrado" });
       }
 
-      // ✅ VALIDAÇÃO DE NOME ÚNICO PARA ATUALIZAÇÃO
       if (name && name.trim() !== existingProduct.name) {
         const existingProductWithName = await Product.findOne({
           where: {
@@ -817,7 +783,6 @@ module.exports = {
         }
       }
 
-      // Atualiza categorias
       if (
         category_ids &&
         Array.isArray(category_ids) &&
@@ -846,27 +811,25 @@ module.exports = {
         await existingProduct.setCategories(categories, { transaction });
       }
 
-      // Atualiza o produto
       await Product.update(updatedFields, {
         where: { id: productId },
         transaction,
       });
 
-      // Atualiza imagens - CORRIGIDO nome da coluna
       const images = req.files;
       if (images && images.length > 0) {
-        await Image.destroy({ where: { product_id: productId }, transaction }); // Mudado de ProductId para product_id
+        await Image.destroy({ where: { product_id: productId }, transaction });
         const novasImagens = images.map((file) => ({
           path: `/uploads/${file.filename}`,
           enabled: true,
-          product_id: productId, // Mudado de ProductId para product_id
+          product_id: productId,
         }));
         await Image.bulkCreate(novasImagens, { transaction });
       }
 
       // Atualiza opções - CORRIGIDO nome da coluna
       if (Array.isArray(options) && options.length > 0) {
-        await Option.destroy({ where: { product_id: productId }, transaction }); // Mudado de ProductId para product_id
+        await Option.destroy({ where: { product_id: productId }, transaction });
         const novasOpcoes = options.map((opt) => {
           if (!opt.title || !opt.type) {
             throw new Error(`Opção inválida: title e type são obrigatórios`);
@@ -881,7 +844,7 @@ module.exports = {
               : typeof opt.values === "string"
               ? opt.values
               : "[]",
-            product_id: productId, // Mudado de ProductId para product_id
+            product_id: productId,
           };
         });
 
@@ -890,7 +853,6 @@ module.exports = {
 
       await transaction.commit();
 
-      // Busca o produto atualizado - CORRIGIDO alias
       const updatedProduct = await Product.findByPk(productId, {
         include: [
           {
@@ -905,7 +867,7 @@ module.exports = {
           },
           {
             model: Category,
-            as: "categories", // Mudado de "Categories" para "categories"
+            as: "categories",
             attributes: ["id", "name"],
             through: { attributes: [] },
           },
@@ -914,7 +876,6 @@ module.exports = {
 
       const productJson = updatedProduct.toJSON();
 
-      // Processa as opções
       if (productJson.options) {
         productJson.options = productJson.options.map((option) => ({
           ...option,
@@ -925,7 +886,6 @@ module.exports = {
         }));
       }
 
-      // Processa category_ids - CORRIGIDO alias
       const categoryIds = productJson.categories?.map((cat) => cat.id) || [];
       delete productJson.categories;
       productJson.category_ids = categoryIds;
