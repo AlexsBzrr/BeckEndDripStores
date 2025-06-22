@@ -12,7 +12,7 @@ const options = {
     tags: [
       { name: "Login", description: "Endpoints de login" },
       { name: "Users", description: "Gerenciamento de usuários" },
-      { name: "Category", description: "Gerenciamento de categorias" },
+      { name: "Categories", description: "Gerenciamento de categorias" },
       { name: "Products", description: "Gerenciamento de produtos" },
     ],
     components: {
@@ -30,10 +30,7 @@ const options = {
       },
     ],
   },
-  apis: [
-    path.resolve(__dirname, "../controllers/*.js"),
-    path.resolve(__dirname, "../config/*.js"),
-  ],
+  apis: [path.resolve(__dirname, "./docApiSwageer/*.js")],
 };
 
 const swaggerSpec = swaggerJSDoc(options);

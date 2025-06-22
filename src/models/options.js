@@ -1,36 +1,37 @@
 const { Model, DataTypes } = require("sequelize");
 
 class Option extends Model {
+  // CORRIGIDO: era Product, agora é Option
   static init(sequelize) {
-    return super.init(
+    super.init(
       {
-        title: DataTypes.STRING,
-        shape: DataTypes.STRING,
-        radius: DataTypes.STRING,
-        type: DataTypes.STRING,
-        // value: DataTypes.JSON, // Para armazenar arrays
-        values: DataTypes.JSON, // Para armazenar arrays
-        ProductId: {
-          type: DataTypes.INTEGER,
+        title: { type: DataTypes.STRING, allowNull: false },
+        shape: {
+          type: DataTypes.STRING,
           allowNull: false,
-          references: {
-            model: "products",
-            key: "id",
-          },
+          defaultValue: "square",
         },
+        radius: { type: DataTypes.STRING, allowNull: false, defaultValue: "4" },
+        type: { type: DataTypes.STRING, allowNull: false },
+        values: { type: DataTypes.JSON, allowNull: false },
+        product_id: { type: DataTypes.INTEGER, allowNull: false },
       },
       {
         sequelize,
         modelName: "Option",
         tableName: "options",
-        timestamps: true,
+        underscored: true,
       }
     );
+    return this;
   }
 
   static associate(models) {
-    this.belongsTo(models.Product, { foreignKey: "ProductId", as: "product" });
+    this.belongsTo(models.Product, {
+      foreignKey: "product_id",
+      as: "product",
+    });
   }
 }
 
-module.exports = Option;
+module.exports = Option; // CORRIGIDO: era Product, agora é Option

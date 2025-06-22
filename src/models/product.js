@@ -1,39 +1,42 @@
-// src/models/product.js
 const { Model, DataTypes } = require("sequelize");
 
 class Product extends Model {
   static init(sequelize) {
-    return super.init(
+    super.init(
       {
-        enabled: {
-          type: DataTypes.BOOLEAN,
-          defaultValue: true,
-        },
-        name: DataTypes.STRING,
-        slug: DataTypes.STRING,
-        stock: DataTypes.INTEGER,
+        name: { type: DataTypes.STRING, allowNull: false, unique: true },
+        slug: { type: DataTypes.STRING, allowNull: false, unique: true },
         description: DataTypes.TEXT,
-        price: DataTypes.FLOAT,
+        price: { type: DataTypes.FLOAT, allowNull: false, defaultValue: 0 },
         price_with_discount: DataTypes.FLOAT,
+        stock: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+        enabled: { type: DataTypes.BOOLEAN, defaultValue: true },
       },
       {
         sequelize,
         modelName: "Product",
         tableName: "products",
-        timestamps: true,
+        underscored: true,
       }
     );
+    return this;
   }
 
-  // Métodos de associação
   static associate(models) {
+    this.hasMany(models.Image, {
+      foreignKey: "product_id",
+      as: "images",
+    });
+    this.hasMany(models.Option, {
+      foreignKey: "product_id",
+      as: "options",
+    });
     this.belongsToMany(models.Category, {
       through: "ProductCategory",
-      as: "Categories",
-      foreignKey: "ProductId",
+      foreignKey: "product_id",
+      otherKey: "category_id",
+      as: "categories",
     });
-    this.hasMany(models.Image, { foreignKey: "ProductId", as: "images" });
-    this.hasMany(models.Option, { foreignKey: "ProductId", as: "options" });
   }
 }
 

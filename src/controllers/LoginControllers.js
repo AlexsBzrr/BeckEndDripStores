@@ -1,12 +1,12 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
+const authConfig = require("../config/auth");
 
-function generateToken(payload, expiresIn = "24h") {
-  const secret = process.env.JWT_SECRET;
-  const token = jwt.sign(payload, secret, { expiresIn });
+function generateToken(payload, expiresIn = "8h") {
+  const token = jwt.sign(payload, authConfig.secret, { expiresIn });
   try {
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, authConfig.secret);
   } catch (error) {
     console.error("Erro ao verificar token criado:", error);
   }
@@ -85,62 +85,3 @@ module.exports = {
     }
   },
 };
-
-/**
- * @swagger
- * tags:
- *   - name: Login
- *     description: Operações relacionadas a login
- */
-/**
- * @swagger
- * /v1/users/login:
- *   post:
- *     tags:
- *       - Login
- *     summary: Registra uma tentativa de login
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "john@example.com"
- *               password:
- *                 type: string
- *                 example: "senha123"
- *     responses:
- *       200:
- *         description: Registro de login criado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Login registrado com sucesso!"
- *                 login:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                     userId:
- *                       type: integer
- *                     status:
- *                       type: string
- *                     ipAddress:
- *                       type: string
- *                     timestamp:
- *                       type: string
- *                       format: date-time
- */

@@ -1,6 +1,6 @@
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
     return res.status(401).json({
@@ -12,7 +12,6 @@ function authenticateToken(req, res, next) {
     const secret = process.env.JWT_SECRET;
     const decoded = jwt.verify(token, secret);
 
-    // Adicionar dados do usuário na requisição
     req.user = {
       id: decoded.id,
       firstname: decoded.firstname,
