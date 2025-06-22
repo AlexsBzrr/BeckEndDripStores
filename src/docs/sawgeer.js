@@ -5,7 +5,7 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Drip Stores API",
+      title: "Drip Stores API - Swagger Documentation",
       version: "1.0.0",
       description: "Documentação da API Drip Stores",
     },
