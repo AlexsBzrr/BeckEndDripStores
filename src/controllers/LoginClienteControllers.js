@@ -35,7 +35,7 @@ module.exports = {
         });
       }
 
-      let isPasswordValid = await bcrypt.compare(password, user.password);
+      let isPasswordValid = await bcrypt.compare(password, cliente.password);
 
       if (
         !isPasswordValid &&
